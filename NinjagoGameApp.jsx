@@ -285,7 +285,7 @@ const Particles = () => {
 };
 
 export default function App() {
-    const [gameState, setGameState] = useState('start'); // start, playing, end, settings, level3select, training, fail
+    const [gameState, setGameState] = useState('start'); // start, playing, end, settings, level3select, training, fail, level_complete
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -297,6 +297,7 @@ export default function App() {
     const [audioAllowed, setAudioAllowed] = useState(false);
     const [sessionWrongWords, setSessionWrongWords] = useState([]);
     const [user, setUser] = useState(null);
+    const [newlyUnlocked, setNewlyUnlocked] = useState(null); // tracking for unlock animation
 
     // --- 新增設定與子關卡狀態 ---
     const [bgmVolume, setBgmVolume] = useState(() => Number(localStorage.getItem('bgmVolume')) || 40);
@@ -730,6 +731,7 @@ export default function App() {
                             ...prev,
                             levels: prev.levels.includes(level) ? prev.levels : [...prev.levels, level]
                         }));
+                        setNewlyUnlocked(level + 1); // 標記新解鎖的關卡
                     } else if (selectedSubLevel !== 'all' && selectedSubLevel !== 'custom') {
                         setCompletedLevels(prev => ({
                             ...prev,
@@ -738,8 +740,8 @@ export default function App() {
                     }
 
                     logToGoogleSheets(null, null, true, "COMPLETION");
-                    setGameState('end');
-                    speak('恭喜晒！你過關啦！');
+                    setGameState('level_complete'); // 改為前往過關結算畫面
+                    speak('恭喜晒！你完成咗呢個任務！');
                 } else {
                     generateQuestion();
                 }
@@ -981,9 +983,15 @@ export default function App() {
                     <div className="flex flex-col md:flex-row gap-6 z-10 w-full max-w-4xl px-4 justify-center">
                         {/* 第一關按鈕 */}
                         <button
-                            onClick={() => startGame(1)}
+                            onClick={() => {
+                                startGame(1);
+                                if (newlyUnlocked === 1) setNewlyUnlocked(null);
+                            }}
                             className="flex-1 group relative px-8 py-6 bg-green-600 hover:bg-green-500 text-white rounded-3xl font-black text-3xl shadow-[0_10px_30px_rgba(22,163,74,0.5)] transition-all hover:scale-105 active:scale-95 border-b-8 border-green-800 flex flex-col items-center gap-3"
                         >
+                            {newlyUnlocked === 1 && (
+                                <div className="absolute inset-0 bg-yellow-400/30 animate-[ping_2s_infinite] rounded-3xl z-10 pointer-events-none" />
+                            )}
                             <span className="text-xl opacity-80">LEVEL 1</span>
                             <span>基礎識字</span>
                             <div className="flex gap-1 mt-2">
@@ -995,7 +1003,12 @@ export default function App() {
 
                         {/* 第二關按鈕 */}
                         <button
-                            onClick={() => startGame(2)}
+                            onClick={() => {
+                                if (completedLevels.levels.includes(1)) {
+                                    startGame(2);
+                                    if (newlyUnlocked === 2) setNewlyUnlocked(null);
+                                }
+                            }}
                             disabled={!completedLevels.levels.includes(1)}
                             className={`flex-1 group relative px-8 py-6 rounded-3xl font-black text-3xl transition-all hover:scale-105 active:scale-95 border-b-8 flex flex-col items-center gap-3 shadow-lg ${
                                 completedLevels.levels.includes(1) 
@@ -1003,6 +1016,9 @@ export default function App() {
                                 : 'bg-slate-700 text-slate-400 border-slate-900 opacity-60 grayscale cursor-not-allowed'
                             }`}
                         >
+                            {newlyUnlocked === 2 && (
+                                <div className="absolute inset-0 bg-yellow-400/30 animate-[ping_2s_infinite] rounded-3xl z-10 pointer-events-none" />
+                            )}
                             <div className="flex items-center gap-2">
                                 <span className="text-xl opacity-80">LEVEL 2</span>
                                 {!completedLevels.levels.includes(1) && <XCircle className="w-5 h-5 text-red-500" />}
@@ -1022,7 +1038,12 @@ export default function App() {
 
                         {/* 第三關按鈕 */}
                         <button
-                            onClick={() => startGame(3)}
+                            onClick={() => {
+                                if (completedLevels.levels.includes(2)) {
+                                    startGame(3);
+                                    if (newlyUnlocked === 3) setNewlyUnlocked(null);
+                                }
+                            }}
                             disabled={!completedLevels.levels.includes(2)}
                             className={`flex-1 group relative px-8 py-6 rounded-3xl font-black text-3xl transition-all hover:scale-105 active:scale-95 border-b-8 flex flex-col items-center gap-3 shadow-lg ${
                                 completedLevels.levels.includes(2) 
@@ -1030,6 +1051,9 @@ export default function App() {
                                 : 'bg-slate-700 text-slate-400 border-slate-900 opacity-60 grayscale cursor-not-allowed'
                             }`}
                         >
+                            {newlyUnlocked === 3 && (
+                                <div className="absolute inset-0 bg-yellow-400/30 animate-[ping_2s_infinite] rounded-3xl z-10 pointer-events-none" />
+                            )}
                             <div className="flex items-center gap-2">
                                 <span className="text-xl opacity-80">LEVEL 3</span>
                                 {!completedLevels.levels.includes(2) && <XCircle className="w-5 h-5 text-red-500" />}
@@ -1172,9 +1196,6 @@ export default function App() {
 
                         {/* 右下角導航按鈕 (遊戲中) - 設定在上面，主頁在下面 */}
                         <div className="absolute bottom-24 right-6 z-40 flex flex-col gap-3 pointer-events-auto">
-                            <button onClick={() => setGameState('settings')} className="bg-slate-800/80 p-3 rounded-full border-2 border-slate-600 text-white hover:bg-slate-700 transition shadow-lg">
-                                <Settings className="w-8 h-8" />
-                            </button>
                             <button onClick={goHome} className="bg-slate-800/80 p-3 rounded-full border-2 border-slate-600 text-white hover:bg-slate-700 transition shadow-lg">
                                 <Home className="w-8 h-8" />
                             </button>
@@ -1565,6 +1586,56 @@ export default function App() {
                     </div>
                 )
             }
+
+            {/* Level Complete Summary Screen */}
+            {gameState === 'level_complete' && (
+                <div className="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-6 text-center overflow-hidden">
+                    <div className="relative animate-ninja-pop max-w-2xl w-full">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-yellow-400/20 blur-[100px] rounded-full animate-pulse"></div>
+                        
+                        <div className="relative z-10 space-y-8 bg-slate-800/50 border border-white/10 p-8 md:p-12 rounded-[40px] shadow-2xl">
+                             <div className="inline-block p-4 bg-yellow-400/20 rounded-full mb-4">
+                                <Trophy className="w-16 h-16 text-yellow-400" />
+                             </div>
+                             
+                             <div>
+                                <h1 className="text-4xl md:text-6xl font-black text-white mb-2 tracking-tighter">
+                                    任務達成！
+                                </h1>
+                                <p className="text-yellow-400 text-xl md:text-2xl font-bold uppercase tracking-widest">
+                                    你已完成第 {level} 關考驗
+                                </p>
+                             </div>
+
+                             <div className="flex flex-col gap-4 items-center">
+                                <div className="text-slate-300 font-bold text-lg md:text-xl">目前戰績進度</div>
+                                <div className="w-full bg-slate-700/50 rounded-full h-8 relative overflow-hidden border-2 border-white/10 p-1">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full transition-all duration-1000 ease-out"
+                                        style={{ width: `${(completedLevels.levels.length / 3) * 100}%` }}
+                                    ></div>
+                                </div>
+                                <div className="text-white font-black text-xl md:text-2xl mt-2 drop-shadow-md">
+                                    {completedLevels.levels.length === 3 
+                                        ? "你已經征服了所有關卡！🎉" 
+                                        : `還剩下 ${3 - completedLevels.levels.length} 關剩餘任務！`}
+                                </div>
+                             </div>
+
+                             <button 
+                                onClick={goHome} 
+                                className="w-full py-5 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-slate-900 font-black text-2xl rounded-2xl shadow-[0_10px_0_rgb(180,130,0)] active:translate-y-1 active:shadow-none transition-all duration-100"
+                             >
+                                返回總部
+                             </button>
+                        </div>
+                        
+                        {/* Decorative Icons */}
+                        <div className="absolute -top-10 -left-10 w-24 h-24 bg-red-600 rounded-3xl flex items-center justify-center text-white text-4xl shadow-xl -rotate-12 animate-bounce">🔥</div>
+                        <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center text-white text-4xl shadow-xl rotate-12 animate-bounce" style={{ animationDelay: '0.5s' }}>⚡</div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
