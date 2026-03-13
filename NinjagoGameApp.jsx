@@ -3,17 +3,17 @@ import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Tra
 
 // === 資料與常數準備 ===
 const CHARACTERS = [
-    { id: 'lloyd', name: '勞埃德', url: 'assets/lloyd.jpg', colorClass: 'text-green-600', element: '❇️ 能量' },
-    { id: 'jay', name: '阿光', url: 'assets/jay.jpg', colorClass: 'text-blue-600', element: '⚡ 閃電' },
-    { id: 'zane', name: '冰忍', url: 'assets/zane.jpg', colorClass: 'text-cyan-600', element: '❄️ 冰雪' },
-    { id: 'kai', name: '赤地', url: 'assets/kai.jpg', colorClass: 'text-red-600', element: '🔥 火焰' },
-    { id: 'cole', name: '阿剛', url: 'assets/cole.jpg', colorClass: 'text-stone-800', element: '🪨 大地' },
-    { id: 'nya', name: '赤蘭', url: 'assets/nya.jpg', colorClass: 'text-sky-600', element: '💧 水' }
+    { id: 'lloyd', name: '勞埃德', url: '/assets/lloyd.jpg', colorClass: 'text-green-600', element: '❇️ 能量' },
+    { id: 'jay', name: '阿光', url: '/assets/jay.jpg', colorClass: 'text-blue-600', element: '⚡ 閃電' },
+    { id: 'zane', name: '冰忍', url: '/assets/zane.jpg', colorClass: 'text-cyan-600', element: '❄️ 冰雪' },
+    { id: 'kai', name: '赤地', url: '/assets/kai.jpg', colorClass: 'text-red-600', element: '🔥 火焰' },
+    { id: 'cole', name: '阿剛', url: '/assets/cole.jpg', colorClass: 'text-stone-800', element: '🪨 大地' },
+    { id: 'nya', name: '赤蘭', url: '/assets/nya.jpg', colorClass: 'text-sky-600', element: '💧 水' }
 ];
 
-const VILLAIN_LEVEL_1 = { id: 'garmadon', name: '伽瑪當魔王', url: 'assets/garmadon.jpg', colorClass: 'text-purple-600' };
-const VILLAIN_LEVEL_2 = { id: 'overlord', name: '黑暗魔主', url: 'assets/overlord.jpg', colorClass: 'text-purple-900', isStrong: true };
-const VILLAIN_LEVEL_3 = { id: 'pythor', name: '派索長老', url: 'assets/pythor.jpg', colorClass: 'text-white', isStrong: true };
+const VILLAIN_LEVEL_1 = { id: 'garmadon', name: '劇毒大師', url: '/assets/garmadon.jpg', colorClass: 'text-purple-600' };
+const VILLAIN_LEVEL_2 = { id: 'overlord', name: '黑暗魔主', url: '/assets/overlord.jpg', colorClass: 'text-purple-900', isStrong: true };
+const VILLAIN_LEVEL_3 = { id: 'pythor', name: '派索長老', url: '/assets/pythor.jpg', colorClass: 'text-white', isStrong: true };
 
 const WORDS_LEVEL_1_2 = [
     '大人', '小人', '大哭', '大笑', '大口', '小口', '爸爸', '媽媽', '上天', '天上', '太大', '太小', '一天', '一月', '二天', '二月', '上上', '下下', '天地', '大地', '太陽', '月亮', '星星', '天亮', '大火', '大水', '火星', '水星', '三天', '三月', '下地', '地上', '地下', '土地', '大山', '小山', '土山', '石山', '火山', '土星', '木星', '好人', '田地', '水田', '我有', '我爸', '我媽', '我哭', '我笑', '好山', '好水'
@@ -154,8 +154,8 @@ const ProgressBar = ({ score, target = 10, heroEnergy = 100, themeIndex = 0, isS
 
                     {/* 英雄 (左側) */}
                     <div className={`relative z-20 ${isHeroAttacking ? 'battle-hero-attack' : isStaggered ? 'battle-hero-hit' : ''}`}>
-                        <div className="w-20 h-20 md:w-32 md:h-32 bg-white rounded-full border-4 border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] overflow-hidden">
-                            <img src="assets/player.jpg" alt="Player" className="w-full h-full object-cover" />
+                        <div className="w-16 h-16 md:w-32 md:h-32 bg-white rounded-full border-4 border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] overflow-hidden">
+                            <img src="/assets/player.jpg" alt="Player" className="w-full h-full object-cover" />
                         </div>
                         <div className="absolute -top-2 -left-2 bg-yellow-500 text-slate-900 rounded-full w-8 h-8 flex items-center justify-center text-xs font-black animate-bounce">LV.Max</div>
                         {isHeroAttacking && (
@@ -214,14 +214,14 @@ const ProgressBar = ({ score, target = 10, heroEnergy = 100, themeIndex = 0, isS
             <div className="absolute top-[40px] left-0 w-[calc(100%-64px)] mx-4 md:mx-8 pointer-events-none">
                 {/* 我方頭像 */}
                 <div
-                    className={`absolute bottom-0 w-20 h-20 bg-white rounded-full border-4 shadow-xl z-20 overflow-hidden ${isStaggered ? 'player-stagger' : 'transition-[left] duration-700 ease-out'}`}
+                    className={`absolute bottom-0 w-16 h-16 md:w-20 md:h-20 bg-white rounded-full border-4 shadow-xl z-20 overflow-hidden ${isStaggered ? 'player-stagger' : 'transition-[left] duration-700 ease-out'}`}
                     style={{ 
-                        left: `calc(${progress}% - 40px)`,
+                        left: `calc(${progress}% - 32px)`,
                         borderColor: theme.id === 'shadow' ? '#7e22ce' : '#facc15',
                         boxShadow: `0 0 20px ${theme.id === 'shadow' ? 'rgba(126,34,206,0.6)' : 'rgba(250,204,21,0.6)'}`
                     }}
                 >
-                    <img src="assets/player.jpg" alt="Player" className="w-full h-full object-cover" />
+                    <img src="/assets/player.jpg" alt="Player" className="w-full h-full object-cover" />
                     {/* 主題圖示跟隨 */}
                     <div className="absolute bottom-0 right-0 bg-white/80 rounded-full w-8 h-8 flex items-center justify-center text-sm shadow-sm">
                         {theme.trail}
@@ -339,10 +339,10 @@ export default function App() {
         const createSFX = (src) => new Audio(src);
 
         return {
-            bgm1: createAudio('assets/bgm1.mp3'),
-            bgm2: createAudio('assets/bgm2.mp3'),
-            correct: createSFX('assets/correct.wav'),
-            wrong: createSFX('assets/wrong.wav')
+            bgm1: createAudio('/assets/bgm1.mp3'),
+            bgm2: createAudio('/assets/bgm2.mp3'),
+            correct: createSFX('/assets/correct.wav'),
+            wrong: createSFX('/assets/wrong.wav')
         }
     }, []);
 
@@ -699,7 +699,7 @@ export default function App() {
     };
 
     return (
-        <div className="relative w-full h-[100dvh] bg-slate-900 overflow-hidden font-sans select-none flex flex-col">
+        <div className="relative w-full min-h-[100dvh] bg-slate-900 overflow-x-hidden overflow-y-auto font-sans select-none flex flex-col md:overflow-hidden">
             {/* 內聯全局動畫樣式設計 */}
             <style>{`
         @keyframes float {
@@ -848,8 +848,8 @@ export default function App() {
                         }
                     }}>
                     <div className="space-y-4">
-                        <h2 className="text-3xl text-yellow-300 font-bold tracking-widest drop-shadow-md">Lego Ninjago Core</h2>
-                        <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-yellow-600 drop-shadow-lg leading-tight">
+                        <h2 className="text-xl md:text-3xl text-yellow-300 font-bold tracking-widest drop-shadow-md">Lego Ninjago Core</h2>
+                        <h1 className="text-5xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-yellow-600 drop-shadow-lg leading-tight">
                             忍者文字<br />大考驗
                         </h1>
                     </div>
@@ -1007,7 +1007,7 @@ export default function App() {
                                         {/* 忍者公仔 (站在手裏劍旁邊) */}
                                         <RealLegoImage
                                             char={option.char}
-                                            className={`w-20 h-20 md:w-28 md:h-28 rounded-full border-4 ${option.char.colorClass.replace('text', 'border')} bg-slate-800 shadow-lg transform translate-y-4 group-hover:-translate-y-2 transition-transform duration-300 z-0`}
+                                            className={`w-16 h-16 md:w-28 md:h-28 rounded-full border-4 ${option.char.colorClass.replace('text', 'border')} bg-slate-800 shadow-lg transform translate-y-4 group-hover:-translate-y-2 transition-transform duration-300 z-0`}
                                         />
 
                                         {/* 手裏劍按鈕 */}
