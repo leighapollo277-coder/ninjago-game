@@ -397,7 +397,7 @@ export default function App() {
         /* global google */
         if (typeof google !== 'undefined') {
             google.accounts.id.initialize({
-                client_id: "713361413807-6f0o5a0s6a1c8m9r2k2v4k4o1v6p4p4.apps.googleusercontent.com", // Placeholder: User should replace with their own or I can suggest one
+                client_id: "977421757055-udocourprogj0595l34kvn2qtd21ejik.apps.googleusercontent.com",
                 callback: handleCredentialResponse
             });
             google.accounts.id.renderButton(
