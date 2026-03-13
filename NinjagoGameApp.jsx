@@ -3,12 +3,12 @@ import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Tra
 
 // === 資料與常數準備 ===
 const CHARACTERS = [
-    { id: 'lloyd', name: '勞埃德', url: '/assets/lloyd.jpg', colorClass: 'text-green-600', element: '❇️ 能量' },
-    { id: 'jay', name: '阿光', url: '/assets/jay.jpg', colorClass: 'text-blue-600', element: '⚡ 閃電' },
-    { id: 'zane', name: '冰忍', url: '/assets/zane.jpg', colorClass: 'text-cyan-600', element: '❄️ 冰雪' },
-    { id: 'kai', name: '赤地', url: '/assets/kai.jpg', colorClass: 'text-red-600', element: '🔥 火焰' },
-    { id: 'cole', name: '阿剛', url: '/assets/cole.jpg', colorClass: 'text-stone-800', element: '🪨 大地' },
-    { id: 'nya', name: '赤蘭', url: '/assets/nya.jpg', colorClass: 'text-sky-600', element: '💧 水' }
+    { id: 'lloyd', name: '勞埃德', url: '/assets/lloyd.jpg', colorClass: 'text-green-600', element: '❇️ 能量', skin: 'lloyd' },
+    { id: 'jay', name: '阿光', url: '/assets/jay.jpg', colorClass: 'text-blue-600', element: '⚡ 閃電', skin: 'jay' },
+    { id: 'zane', name: '冰忍', url: '/assets/zane.jpg', colorClass: 'text-cyan-600', element: '❄️ 冰雪', skin: 'zane' },
+    { id: 'kai', name: '赤地', url: '/assets/kai.jpg', colorClass: 'text-red-600', element: '🔥 火焰', skin: 'kai' },
+    { id: 'cole', name: '阿剛', url: '/assets/cole.jpg', colorClass: 'text-stone-800', element: '🪨 大地', skin: 'cole' },
+    { id: 'nya', name: '赤蘭', url: '/assets/nya.jpg', colorClass: 'text-sky-600', element: '💧 水', skin: 'nya' }
 ];
 
 const VILLAIN_LEVEL_1 = { id: 'garmadon', name: '劇毒大師', url: '/assets/garmadon.jpg', colorClass: 'text-purple-600' };
@@ -19,8 +19,8 @@ const WORDS_LEVEL_1_2 = [
     '大人', '小人', '大哭', '大笑', '大口', '小口', '爸爸', '媽媽', '上天', '天上', '太大', '太小', '一天', '一月', '二天', '二月', '上上', '下下', '天地', '大地', '太陽', '月亮', '星星', '天亮', '大火', '大水', '火星', '水星', '三天', '三月', '下地', '地上', '地下', '土地', '大山', '小山', '土山', '石山', '火山', '土星', '木星', '好人', '田地', '水田', '我有', '我爸', '我媽', '我哭', '我笑', '好山', '好水'
 ];
 
-// 第三關按課別分組 (來自「四五快讀」1至60課)
 const LEVEL_3_PRESETS = [
+
     { name: "第1課", words: ["人", "口", "大", "中", "小", "哭", "笑", "一", "上", "下", "爸", "媽", "大人", "小人", "大哭", "大笑", "大口", "小口"] },
     { name: "第2課", words: ["天", "太", "月", "二", "地", "陽", "亮", "星", "雲", "火", "水", "三", "爸爸", "媽媽", "上天", "天上", "太大", "太小", "一天", "一月", "二天", "二月", "上上", "下下"] },
     { name: "第3課", words: ["土", "山", "石", "木", "我", "好", "有", "田", "天地", "大地", "太陽", "月亮", "星星", "天亮", "大火", "大水", "火星", "水星", "三天", "三月", "下地", "地上", "地下"] },
@@ -78,6 +78,28 @@ const LEVEL_3_PRESETS = [
     { name: "第55課", words: ["其", "實", "輕", "響", "遲", "已", "叠", "包", "碗", "寫", "冒", "您", "祝賀", "賀信", "賀電", "賀禮", "腦子", "頭腦", "大腦", "右腦", "左腦", "小腦", "發呆", "呆呆地", "呆頭呆腦", "起牀", "小牀", "打鬧", "熱鬧", "鬧鐘", "看鐘", "打鐘", "鐘點", "撥動", "準時", "準備", "準是"] }
 ];
 
+// 生成地圖節點 (冒險地圖)
+const MAP_NODES = LEVEL_3_PRESETS.map((preset, idx) => {
+    // 蛇形排列佈局
+    const colCount = 3;
+    const row = Math.floor(idx / colCount);
+    const col = idx % colCount;
+    const isEvenRow = row % 2 === 0;
+    
+    // 計算坐標 (單位: px)
+    const paddingX = 150;
+    const paddingY = 150;
+    const spacingX = 250;
+    const spacingY = 220;
+    
+    const x = isEvenRow ? paddingX + col * spacingX : paddingX + (colCount - 1 - col) * spacingX;
+    const y = paddingY + row * spacingY;
+    
+    return { ...preset, x, y, id: idx };
+});
+
+const DEFAULT_MAP_OFFSET = { x: 0, y: 0 };
+
 const WORDS_LEVEL_3_ALL = LEVEL_3_PRESETS.flatMap(p => p.words);
 
 // 陣列發牌洗牌器
@@ -101,83 +123,99 @@ const BAR_THEMES = [
     { id: 'shadow', color: 'bg-gradient-to-r from-purple-800 to-black', glow: '0 0 30px rgba(88, 28, 135, 0.8)', trail: '🟣', particle: 'bg-purple-600', anim: 'shadow-mist' }
 ];
 
+// === 輔助元件 ===
+const BattleHeader = ({ heroEnergy, villain, progress, heroSkin, isStaggered, isHeroAttacking }) => {
+    const heroInfo = CHARACTERS.find(c => c.skin === heroSkin) || CHARACTERS[3];
+    
+    return (
+        <div className="w-full bg-slate-900/90 px-4 md:px-8 py-4 rounded-3xl border-4 border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.2)] mb-2 relative overflow-visible scale-90 md:scale-100 origin-top">
+            {/* 戰鬥抬頭：雙方血條 */}
+            <div className="flex justify-between gap-4 md:gap-12 mb-4">
+                {/* 英雄血條 (左) */}
+                <div className="flex-1">
+                    <div className="flex justify-between mb-2">
+                        <span className="text-yellow-400 font-bold uppercase">{heroInfo.name} ENERGY</span>
+                        <span className="text-white font-mono">{heroEnergy}%</span>
+                    </div>
+                    <div className="h-4 bg-slate-800 rounded-full border-2 border-slate-700 overflow-hidden">
+                        <div 
+                            className="h-full bg-gradient-to-r from-green-500 to-green-300 transition-all duration-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
+                            style={{ width: `${heroEnergy}%` }}
+                        ></div>
+                    </div>
+                </div>
+                {/* 閃電中心圖示 */}
+                <div className="flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center animate-pulse border-2 border-white">
+                        <span className="text-white font-black">VS</span>
+                    </div>
+                </div>
+                {/* 壞人血條 (右) */}
+                <div className="flex-1">
+                    <div className="flex justify-between mb-2">
+                        <span className="text-red-500 font-bold uppercase">{villain.name}</span>
+                        <span className="text-white font-mono">{Math.max(0, Math.round(100 - progress))}%</span>
+                    </div>
+                    <div className="h-4 bg-slate-800 rounded-full border-2 border-slate-700 overflow-hidden">
+                        <div 
+                            className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-700 ease-out shadow-[0_0_10px_rgba(220,38,38,0.5)]"
+                            style={{ width: `${100 - progress}%` }}
+                        ></div>
+                    </div>
+                </div>
+            </div>
+
+            {/* 戰鬥對決場景 */}
+            <div className="relative h-32 md:h-48 flex items-center justify-between px-12 md:px-24">
+                {/* 背景裝飾：閃電對沖 */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                    <div className="w-full h-1 bg-gradient-to-r from-blue-500 via-white to-red-500 animate-pulse"></div>
+                </div>
+
+                {/* 英雄 (左側) */}
+                <div className={`relative z-20 ${isHeroAttacking ? 'battle-hero-attack' : isStaggered ? 'battle-hero-hit' : ''}`}>
+                    <div className="w-16 h-16 md:w-32 md:h-32 bg-white rounded-full border-4 border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] overflow-hidden">
+                        <img src={heroInfo.url} alt="Player" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="absolute -top-2 -left-2 bg-yellow-500 text-slate-900 rounded-full w-8 h-8 flex items-center justify-center text-xs font-black animate-bounce">LV.Max</div>
+                    {isHeroAttacking && (
+                        <div className="absolute top-1/2 left-full -translate-y-1/2 ml-4 text-6xl animate-ping">💥</div>
+                    )}
+                </div>
+
+                {/* 壞人 (右側) */}
+                <div className={`relative z-10 ${isStaggered ? 'battle-villain-attack' : isHeroAttacking ? 'battle-villain-hit' : ''}`}>
+                    <div className={`w-24 h-24 md:w-36 md:h-36 rounded-full border-6 ${villain.isStrong ? 'border-red-700' : 'border-purple-600'} bg-slate-900 overflow-hidden flex items-center justify-center shadow-2xl`}>
+                        <img src={villain.url} alt={villain.name} className="w-full h-full object-cover" />
+                    </div>
+                    {isStaggered && (
+                        <div className="absolute top-1/2 right-full -translate-y-1/2 mr-4 text-6xl animate-ping">💢</div>
+                    )}
+                </div>
+            </div>
+
+            <div className="mt-4 text-center text-white/50 animate-pulse text-xs tracking-widest uppercase">
+                決勝負！答對題目攻擊對手
+            </div>
+        </div>
+    );
+};
+
 // === 元件：動態進度條 ===
-const ProgressBar = ({ score, target = 10, heroEnergy = 100, themeIndex = 0, isStaggered = false, villain, isBattleMode = false, isHeroAttacking = false }) => {
+const ProgressBar = ({ score, target = 10, heroEnergy = 100, themeIndex = 0, isStaggered = false, villain, isBattleMode = false, isHeroAttacking = false, heroSkin }) => {
     const theme = BAR_THEMES[themeIndex % BAR_THEMES.length];
     const progress = (score / target) * 100;
 
     if (isBattleMode) {
         return (
-            <div className="w-full bg-slate-900/90 px-4 md:px-8 py-4 rounded-3xl border-4 border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.2)] mb-2 relative overflow-visible scale-90 md:scale-100 origin-top">
-                {/* 戰鬥抬頭：雙方血條 */}
-                <div className="flex justify-between gap-4 md:gap-12 mb-4">
-                    {/* 英雄血條 (左) */}
-                    <div className="flex-1">
-                        <div className="flex justify-between mb-2">
-                            <span className="text-yellow-400 font-bold">NIJA HERO ENERGY</span>
-                            <span className="text-white font-mono">{heroEnergy}%</span>
-                        </div>
-                        <div className="h-4 bg-slate-800 rounded-full border-2 border-slate-700 overflow-hidden">
-                            <div 
-                                className="h-full bg-gradient-to-r from-green-500 to-green-300 transition-all duration-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
-                                style={{ width: `${heroEnergy}%` }}
-                            ></div>
-                        </div>
-                    </div>
-                    {/* 閃電中心圖示 */}
-                    <div className="flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center animate-pulse border-2 border-white">
-                            <span className="text-white font-black">VS</span>
-                        </div>
-                    </div>
-                    {/* 壞人血條 (右) */}
-                    <div className="flex-1">
-                        <div className="flex justify-between mb-2">
-                            <span className="text-red-500 font-bold uppercase">{villain.name}</span>
-                            <span className="text-white font-mono">{Math.max(0, Math.round(100 - progress))}%</span>
-                        </div>
-                        <div className="h-4 bg-slate-800 rounded-full border-2 border-slate-700 overflow-hidden">
-                            <div 
-                                className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-700 ease-out shadow-[0_0_10px_rgba(220,38,38,0.5)]"
-                                style={{ width: `${100 - progress}%` }}
-                            ></div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 戰鬥對決場景 */}
-                <div className="relative h-32 md:h-48 flex items-center justify-between px-12 md:px-24">
-                    {/* 背景裝飾：閃電對沖 */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-                        <div className="w-full h-1 bg-gradient-to-r from-blue-500 via-white to-red-500 animate-pulse"></div>
-                    </div>
-
-                    {/* 英雄 (左側) */}
-                    <div className={`relative z-20 ${isHeroAttacking ? 'battle-hero-attack' : isStaggered ? 'battle-hero-hit' : ''}`}>
-                        <div className="w-16 h-16 md:w-32 md:h-32 bg-white rounded-full border-4 border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] overflow-hidden">
-                            <img src="/assets/player.jpg" alt="Player" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="absolute -top-2 -left-2 bg-yellow-500 text-slate-900 rounded-full w-8 h-8 flex items-center justify-center text-xs font-black animate-bounce">LV.Max</div>
-                        {isHeroAttacking && (
-                            <div className="absolute top-1/2 left-full -translate-y-1/2 ml-4 text-6xl animate-ping">💥</div>
-                        )}
-                    </div>
-
-                    {/* 壞人 (右側) */}
-                    <div className={`relative z-10 ${isStaggered ? 'battle-villain-attack' : isHeroAttacking ? 'battle-villain-hit' : ''}`}>
-                        <div className={`w-24 h-24 md:w-36 md:h-36 rounded-full border-6 ${villain.isStrong ? 'border-red-700' : 'border-purple-600'} bg-slate-900 overflow-hidden flex items-center justify-center shadow-2xl`}>
-                            <img src={villain.url} alt={villain.name} className="w-full h-full object-cover" />
-                        </div>
-                        {isStaggered && (
-                            <div className="absolute top-1/2 right-full -translate-y-1/2 mr-4 text-6xl animate-ping">💢</div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="mt-4 text-center text-white/50 animate-pulse text-xs tracking-widest uppercase">
-                    決勝負！答對題目攻擊對手
-                </div>
-            </div>
+            <BattleHeader 
+                heroEnergy={heroEnergy} 
+                villain={villain} 
+                progress={progress} 
+                heroSkin={heroSkin}
+                isStaggered={isStaggered}
+                isHeroAttacking={isHeroAttacking}
+            />
         );
     }
 
@@ -285,7 +323,7 @@ const Particles = () => {
 };
 
 export default function App() {
-    const [gameState, setGameState] = useState('start'); // start, playing, end, settings, level3select, training, fail, level_complete
+    const [gameState, setGameState] = useState('start'); // start, playing, end, settings, map, training, fail, level_complete
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -298,6 +336,7 @@ export default function App() {
     const [sessionWrongWords, setSessionWrongWords] = useState([]);
     const [user, setUser] = useState(null);
     const [newlyUnlocked, setNewlyUnlocked] = useState(null); // tracking for unlock animation
+    const [heroSkin, setHeroSkin] = useState(() => localStorage.getItem('heroSkin') || 'kai');
 
     // --- 新增設定與子關卡狀態 ---
     const [bgmVolume, setBgmVolume] = useState(() => Number(localStorage.getItem('bgmVolume')) || 40);
@@ -334,7 +373,8 @@ export default function App() {
         localStorage.setItem('customWordSets', JSON.stringify(customWordSets));
         localStorage.setItem('wordStats', JSON.stringify(wordStats));
         localStorage.setItem('completedLevels', JSON.stringify(completedLevels));
-    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, googleSheetsUrl, customWordSets, wordStats, completedLevels]);
+        localStorage.setItem('heroSkin', heroSkin);
+    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, googleSheetsUrl, customWordSets, wordStats, completedLevels, heroSkin]);
 
     // --- 音效準備 ---
     const audioContext = React.useMemo(() => {
@@ -366,14 +406,15 @@ export default function App() {
         if (!audioAllowed) return;
 
         if (gameState === 'playing') {
-            if (level === 1) {
-                audioContext.bgm2.pause();
-                audioContext.bgm2.currentTime = 0;
-                audioContext.bgm1.play().catch(e => console.log(e));
-            } else if (level === 2) {
+            // For map levels, use bgm2
+            if (level === 3) {
                 audioContext.bgm1.pause();
-                audioContext.bgm1.currentTime = 0;
+                audioContext.bgm2.currentTime = 0;
                 audioContext.bgm2.play().catch(e => console.log(e));
+            } else { // Fallback for other levels if they were to exist
+                audioContext.bgm2.pause();
+                audioContext.bgm1.currentTime = 0;
+                audioContext.bgm1.play().catch(e => console.log(e));
             }
         } else {
             // Start 或 End 畫面時暫停音樂
@@ -580,76 +621,12 @@ export default function App() {
         speak(`${targetWord}`);
     }, [speak, currentWordPool, wordStats]);
 
-    const startGame = (selectedLevel = 1) => {
-        // 檢查鎖定
-        if (selectedLevel === 2 && !completedLevels.levels.includes(1)) {
-            speak('要先完成第一關先可以玩第二關呀！');
-            return;
-        }
-        if (selectedLevel === 3 && !completedLevels.levels.includes(2)) {
-            speak('要先完成第二關先可以選第三關嘅課別呀！');
-            return;
-        }
-
+    const startAdventure = () => {
         setAudioAllowed(true);
-        setLevel(selectedLevel);
-
-        // 重置詞庫與基礎狀態
-        let pool = WORDS_LEVEL_1_2;
-        if (selectedLevel < 3) {
-            setCurrentWordPool(pool);
-            setSelectedSubLevel('all');
-            
-            // 計算目標分數
-            const targetNumber = questionsPerLevel === 'max' ? pool.length : Math.min(pool.length, parseInt(questionsPerLevel, 10));
-            setTargetScore(targetNumber);
-        }
-
-        setScore(0);
-        setHeroEnergy(100);
-        setSessionWrongWords([]);
-        setGameState(selectedLevel < 3 ? 'playing' : 'level3select');
-
-        // 根據選擇的關卡播放對應音樂
-        if (selectedLevel === 1) {
-            audioContext.bgm2.pause();
-            audioContext.bgm1.currentTime = 0;
-            audioContext.bgm1.play().catch(e => console.log(e));
-        } else if (selectedLevel === 2) {
-            audioContext.bgm1.pause();
-            audioContext.bgm2.currentTime = 0;
-            audioContext.bgm2.play().catch(e => console.log(e));
-        }
-
-        // 如果是 Level 1 or 2，直接開始題目
-        if (selectedLevel < 3) {
-            generateQuestion(pool);
-        }
-    };
-
-    const startLevel2 = () => {
+        setGameState('map');
+        // Play BGM for map if needed, or keep silent
         audioContext.bgm1.pause();
-        audioContext.bgm2.currentTime = 0;
-        audioContext.bgm2.play().catch(e => console.log(e));
-
-        const pool = WORDS_LEVEL_1_2;
-        setLevel(2);
-        setCurrentWordPool(pool);
-        setSelectedSubLevel('all');
-        
-        // 計算目標分數
-        const targetNumber = questionsPerLevel === 'max' ? pool.length : Math.min(pool.length, parseInt(questionsPerLevel, 10));
-        setTargetScore(targetNumber);
-
-        setScore(0);
-        setHeroEnergy(100);
-        setSessionWrongWords([]);
-        setGameState('playing');
-        generateQuestion(pool);
-    };
-
-    const startLevel3 = () => {
-        setGameState('level3select');
+        audioContext.bgm2.pause();
     };
 
     const goHome = () => {
@@ -661,20 +638,31 @@ export default function App() {
 
     // 選擇特定子關卡並開始
     const startSubLevel = (words, subName) => {
-        // 檢查是否鎖定
+        // Determine the actual level based on subName
+        let currentLevel = 3; // All map nodes are considered Level 3
+        if (subName === 'all' || subName === 'custom') {
+            currentLevel = 3; // Or a special level ID for these
+        } else {
+            const presetIndex = LEVEL_3_PRESETS.findIndex(p => p.name === subName);
+            if (presetIndex >= 0 && presetIndex < 20) currentLevel = 1; // Example: first 20 lessons are level 1
+            else if (presetIndex >= 20 && presetIndex < 40) currentLevel = 2; // Next 20 are level 2
+            else currentLevel = 3; // Remaining are level 3
+        }
+        setLevel(currentLevel);
+
+        // Check if locked
         const subIdx = LEVEL_3_PRESETS.findIndex(p => p.name === subName);
-        if (subIdx > 0) {
+        if (subIdx === 0 && !completedLevels.levels.includes(0)) { // Assuming Level 0 is a prerequisite for the first map node
+            // This logic needs to be refined based on how levels are unlocked.
+            // For now, let's assume the first map node is always available if you reach the map.
+        } else if (subIdx > 0) {
             const prevSubName = LEVEL_3_PRESETS[subIdx - 1].name;
             if (!completedLevels.subLevels.includes(prevSubName)) {
                 speak(`要先完成${prevSubName}先可以玩依個課別呀！`);
                 return;
             }
-        } else if (subIdx === 0 && !completedLevels.levels.includes(2)) {
-            speak(`要先完成第二關先可以開始第三關嘅課別呀！`);
-            return;
         }
 
-        setLevel(3);
         setCurrentWordPool(words);
         setSelectedSubLevel(subName);
         
@@ -725,19 +713,16 @@ export default function App() {
             setTimeout(() => {
                 setCorrectPopup(null);
                 if (newScore >= targetScore) {
-                    // 更新過關狀態
-                    if (level < 3) {
-                        setCompletedLevels(prev => ({
-                            ...prev,
-                            levels: prev.levels.includes(level) ? prev.levels : [...prev.levels, level]
-                        }));
-                        setNewlyUnlocked(level + 1); // 標記新解鎖的關卡
-                    } else if (selectedSubLevel !== 'all' && selectedSubLevel !== 'custom') {
+                    // Update completion status for map nodes
+                    if (selectedSubLevel !== 'all' && selectedSubLevel !== 'custom') {
                         setCompletedLevels(prev => ({
                             ...prev,
                             subLevels: prev.subLevels.includes(selectedSubLevel) ? prev.subLevels : [...prev.subLevels, selectedSubLevel]
                         }));
                     }
+                    // Check if all sub-levels are completed to unlock a "main" level if applicable
+                    // This logic might need to be more complex if there are main levels to unlock from sub-levels.
+                    // For now, just mark the sub-level as complete.
 
                     logToGoogleSheets(null, null, true, "COMPLETION");
                     setGameState('level_complete'); // 改為前往過關結算畫面
@@ -941,6 +926,14 @@ export default function App() {
           cursor: pointer;
           box-shadow: 0 0 10px rgba(251,191,36,0.5);
         }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+        .animate-dash {
+            animation: dash 60s linear infinite;
+        }
       `}</style>
 
             <Particles />
@@ -982,117 +975,177 @@ export default function App() {
 
                     {/* User Profile (If logged in) */}
                     <div className="z-20 flex flex-col items-center gap-4">
-                        {user && (
-                            <div className="flex items-center gap-4 bg-white/10 p-3 rounded-full border border-white/20">
-                                <img src={user.picture} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400" />
-                                <div className="text-left">
-                                    <p className="text-white font-bold leading-none">{user.name}</p>
-                                    <p className="text-yellow-400 text-xs">{user.email}</p>
-                                </div>
-                                <button onClick={() => setUser(null)} className="ml-2 text-white/50 hover:text-white"><X className="w-5 h-5"/></button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex flex-col md:flex-row gap-6 z-10 w-full max-w-4xl px-4 justify-center">
-                        {/* 第一關按鈕 */}
-                        <button
-                            onClick={() => {
-                                startGame(1);
-                                if (newlyUnlocked === 1) setNewlyUnlocked(null);
-                            }}
-                            className={`flex-1 group relative px-8 py-6 bg-green-600 hover:bg-green-500 text-white rounded-3xl font-black text-3xl shadow-[0_10px_30px_rgba(22,163,74,0.5)] transition-all hover:scale-105 active:scale-95 border-b-8 border-green-800 flex flex-col items-center gap-3 ${newlyUnlocked === 1 ? 'unlock-glow' : ''}`}
-                        >
-                            {newlyUnlocked === 1 && (
-                                <div className="absolute -top-4 -right-4 z-20 text-5xl lock-open-anim">🔓</div>
-                            )}
-                            <span className="text-xl opacity-80">LEVEL 1</span>
-                            <span>基礎識字</span>
-                            <div className="flex gap-1 mt-2">
-                                <span className="w-3 h-3 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></span>
-                                <span className="w-3 h-3 bg-slate-300 rounded-full"></span>
-                                <span className="w-3 h-3 bg-slate-300 rounded-full"></span>
-                            </div>
-                        </button>
-
-                        {/* 第二關按鈕 */}
-                        <button
-                            onClick={() => {
-                                if (completedLevels.levels.includes(1)) {
-                                    startGame(2);
-                                    if (newlyUnlocked === 2) setNewlyUnlocked(null);
-                                }
-                            }}
-                            disabled={!completedLevels.levels.includes(1)}
-                            className={`flex-1 group relative px-8 py-6 rounded-3xl font-black text-3xl transition-all hover:scale-105 active:scale-95 border-b-8 flex flex-col items-center gap-3 shadow-lg ${
-                                completedLevels.levels.includes(1) 
-                                ? 'bg-red-600 hover:bg-red-500 text-white border-red-800 shadow-[0_10px_30px_rgba(220,38,38,0.5)]' 
-                                : 'bg-slate-700 text-slate-400 border-slate-900 opacity-60 grayscale cursor-not-allowed'
-                            } ${newlyUnlocked === 2 ? 'unlock-glow' : ''}`}
-                        >
-                            {newlyUnlocked === 2 && (
-                                <div className="absolute -top-4 -right-4 z-20 text-5xl lock-open-anim">🔓</div>
-                            )}
-                            <div className="flex items-center gap-2">
-                                <span className="text-xl opacity-80">LEVEL 2</span>
-                                {!completedLevels.levels.includes(1) && <XCircle className="w-5 h-5 text-red-500" />}
-                            </div>
-                            <span>進階挑戰</span>
-                            <div className="flex gap-1 mt-2">
-                                <span className="w-3 h-3 bg-yellow-400 rounded-full"></span>
-                                <span className={`w-3 h-3 rounded-full ${completedLevels.levels.includes(1) ? 'bg-yellow-400 animate-bounce' : 'bg-slate-500'}`} style={{ animationDelay: '0.2s' }}></span>
-                                <span className="w-3 h-3 bg-slate-300 rounded-full"></span>
-                            </div>
-                            {!completedLevels.levels.includes(1) && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-3xl">
-                                    <span className="text-4xl text-white drop-shadow-lg">🔒</span>
+                            {user && (
+                                <div className="flex items-center gap-4 bg-white/10 p-3 rounded-full border border-white/20">
+                                    <img src={user.picture} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400" />
+                                    <div className="text-left">
+                                        <p className="text-white font-bold leading-none">{user.name}</p>
+                                        <p className="text-yellow-400 text-xs">{user.email}</p>
+                                    </div>
+                                    <button onClick={() => setUser(null)} className="ml-2 text-white/50 hover:text-white"><X className="w-5 h-5"/></button>
                                 </div>
                             )}
-                        </button>
+                        </div>
 
-                        {/* 第三關按鈕 */}
-                        <button
-                            onClick={() => {
-                                if (completedLevels.levels.includes(2)) {
-                                    startGame(3);
-                                    if (newlyUnlocked === 3) setNewlyUnlocked(null);
-                                }
-                            }}
-                            disabled={!completedLevels.levels.includes(2)}
-                            className={`flex-1 group relative px-8 py-6 rounded-3xl font-black text-3xl transition-all hover:scale-105 active:scale-95 border-b-8 flex flex-col items-center gap-3 shadow-lg ${
-                                completedLevels.levels.includes(2) 
-                                ? 'bg-purple-700 hover:bg-purple-600 text-white border-purple-900 shadow-[0_10px_30px_rgba(126,34,206,0.5)]' 
-                                : 'bg-slate-700 text-slate-400 border-slate-900 opacity-60 grayscale cursor-not-allowed'
-                            } ${newlyUnlocked === 3 ? 'unlock-glow' : ''}`}
-                        >
-                            {newlyUnlocked === 3 && (
-                                <div className="absolute -top-4 -right-4 z-20 text-5xl lock-open-anim">🔓</div>
-                            )}
-                            <div className="flex items-center gap-2">
-                                <span className="text-xl opacity-80">LEVEL 3</span>
-                                {!completedLevels.levels.includes(2) && <XCircle className="w-5 h-5 text-red-500" />}
-                            </div>
-                            <span>終極詞庫</span>
-                            <div className="flex gap-1 mt-2">
-                                <span className="w-3 h-3 bg-yellow-400 rounded-full"></span>
-                                <span className="w-3 h-3 bg-yellow-400 rounded-full"></span>
-                                <span className={`w-3 h-3 rounded-full ${completedLevels.levels.includes(2) ? 'bg-yellow-400 animate-bounce' : 'bg-slate-500'}`} style={{ animationDelay: '0.4s' }}></span>
-                            </div>
-                            {!completedLevels.levels.includes(2) && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-3xl">
-                                    <span className="text-4xl text-white drop-shadow-lg">🔒</span>
+                        {/* Cinematic Background */}
+                        <div className="absolute inset-0 z-0">
+                            <img 
+                                src="/assets/home_bg.png" 
+                                className="w-full h-full object-cover scale-105 animate-slow-zoom opacity-60" 
+                                alt="Ninjago Experience"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/50"></div>
+                        </div>
+
+                        {/* Top Control - Overriding Global for Home */}
+                        <div className="absolute top-8 right-8 z-50">
+                            <button
+                                onClick={() => setGameState('settings')}
+                                className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-white/20 transition-all border border-white/20 group shadow-2xl"
+                            >
+                                <Settings className="w-8 h-8 text-white group-hover:rotate-90 transition-transform duration-500" />
+                            </button>
+                        </div>
+
+                        {/* Main Content */}
+                        <div className="relative z-10 text-center space-y-12 max-w-4xl px-6">
+                            <div className="space-y-4 animate-ninja-pop">
+                                <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                                    NINJA<span className="text-yellow-400">GO</span>
+                                </h1>
+                                <div className="text-2xl md:text-4xl font-bold text-yellow-500 tracking-[0.5em] uppercase drop-shadow-md">
+                                    旋風忍者：冒險之旅
                                 </div>
-                            )}
-                        </button>
-                    </div>
+                            </div>
 
-                    <div className="flex space-x-6 bg-black/40 p-5 rounded-3xl backdrop-blur-sm border-2 border-slate-700 z-10">
-                        {CHARACTERS.slice(0, 4).map(char => (
-                            <RealLegoImage key={char.id} char={char} className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-slate-500 bg-slate-800" />
-                        ))}
-                    </div>
+                            <div className="flex flex-col items-center gap-6">
+                                <button
+                                    onClick={() => {
+                                        setGameState('map');
+                                        speak('準備好開始冒險未？出發！');
+                                    }}
+                                    className="group relative px-16 py-8 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-[32px] shadow-[0_15px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all duration-100"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <Play className="w-12 h-12 text-slate-900 fill-slate-900" />
+                                        <span className="text-5xl font-black text-slate-900 uppercase">START</span>
+                                    </div>
+                                    <div className="absolute -inset-1 bg-yellow-400 blur opacity-20 group-hover:opacity-40 transition-opacity rounded-[32px]"></div>
+                                </button>
+                                
+                                <p className="text-slate-400 font-bold tracking-widest animate-pulse mt-4">
+                                    — 點擊開始你的忍者修煉之路 —
+                                </p>
+                            </div>
+
+                            {/* Hero Preview */}
+                            <div className="pt-8 flex items-center justify-center gap-8">
+                                <div className="p-2 bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 flex items-center gap-4 pr-8">
+                                    <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-yellow-400 bg-slate-800">
+                                        <img 
+                                            src={CHARACTERS.find(c => c.skin === heroSkin)?.url || '/assets/kai.jpg'} 
+                                            className="w-full h-full object-cover"
+                                            alt="Current Hero"
+                                        />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="text-sm text-slate-400 font-bold uppercase">目前角色</div>
+                                        <div className="text-2xl font-black text-white">
+                                            {CHARACTERS.find(c => c.skin === heroSkin)?.name || '赤地'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                 </div>
             )}
+
+            {/* ===================== 冒險地圖 ===================== */}
+            {
+                gameState === 'map' && (
+                    <div className="flex flex-col h-full z-50 bg-slate-950 relative text-white overflow-hidden animate-ninja-pop">
+                        {/* 頂部導航 */}
+                        <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-900/50 backdrop-blur-md z-30">
+                            <button onClick={goHome} className="p-4 rounded-full bg-slate-800 hover:bg-slate-700 transition border border-white/10">
+                                <Home className="w-8 h-8" />
+                            </button>
+                            <div className="text-center">
+                                <h1 className="text-3xl font-black text-yellow-400 tracking-tighter italic">ADVENTURE MAP</h1>
+                                <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.3em]">旋風冒險之旅</p>
+                            </div>
+                            <div className="w-16"></div>
+                        </div>
+
+                        {/* 地圖滾動區 */}
+                        <div className="flex-1 overflow-auto bg-[url('/assets/home_bg.png')] bg-fixed bg-cover relative scroll-smooth scrollbar-hide">
+                            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px]"></div>
+                            
+                            <div className="relative py-20" style={{ width: '1000px', height: `${MAP_NODES[MAP_NODES.length-1].y + 400}px` }}>
+                                {/* 繪製點位 */}
+                                {MAP_NODES.map((node, idx) => {
+                                    const isLocked = idx > 0 && !completedLevels.subLevels.includes(MAP_NODES[idx - 1].name);
+                                    const isCompleted = completedLevels.subLevels.includes(node.name);
+
+                                    return (
+                                        <div 
+                                            key={node.name}
+                                            style={{ left: node.x, top: node.y }}
+                                            className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
+                                        >
+                                            <button
+                                                onClick={() => !isLocked && startSubLevel(node.words, node.name)}
+                                                className={`group relative p-6 rounded-full border-4 transition-all duration-300 ${
+                                                    isLocked 
+                                                    ? 'bg-slate-900/80 border-slate-800 cursor-not-allowed grayscale' 
+                                                    : isCompleted 
+                                                        ? 'bg-green-500 border-white shadow-[0_0_20px_rgba(34,197,94,0.5)]' 
+                                                        : 'bg-yellow-400 border-white shadow-[0_0_30px_rgba(234,179,8,0.4)] pulse-slow'
+                                                }`}
+                                            >
+                                                <span className="text-3xl font-black text-slate-950">
+                                                    {isLocked ? '🔒' : isCompleted ? '✅' : idx + 1}
+                                                </span>
+
+                                                {/* 標籤 */}
+                                                <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 backdrop-blur-md px-6 py-2 rounded-xl border border-white/20 text-xl font-black text-white shadow-2xl">
+                                                    {node.name}
+                                                </div>
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Independent Player Icon for Animation */}
+                                {(() => {
+                                    const subLevels = completedLevels.subLevels;
+                                    const currentIdx = subLevels.length; // Next uncompleted lesson is the target
+                                    const targetNode = MAP_NODES[Math.min(currentIdx, MAP_NODES.length - 1)];
+                                    
+                                    return (
+                                        <div 
+                                            className="absolute transition-all duration-1000 ease-in-out z-20"
+                                            style={{ 
+                                                left: targetNode.x, 
+                                                top: targetNode.y,
+                                                transform: 'translate(-50%, -100%)' 
+                                            }}
+                                        >
+                                            <div className="relative animate-bounce">
+                                                <RealLegoImage 
+                                                    char={CHARACTERS.find(c => c.skin === heroSkin) || CHARACTERS[3]} 
+                                                    className="w-24 h-24 rounded-2xl border-4 border-white shadow-2xl bg-slate-800"
+                                                />
+                                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 bg-white rotate-45 transform skew-x-12"></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
             {/* ===================== 遊玩畫面 ===================== */}
             {gameState === 'playing' && currentQuestion && (
@@ -1129,6 +1182,7 @@ export default function App() {
                             isStaggered={isPlayerStaggered}
                             isHeroAttacking={!!correctPopup}
                             isBattleMode={globalBattleMode || selectedSubLevel === "第55課"}
+                            heroSkin={heroSkin}
                             themeIndex={
                                 level < 3 
                                 ? (level - 1) 
@@ -1219,71 +1273,7 @@ export default function App() {
             )
             }
 
-            {/* ===================== 過關畫面 ===================== */}
-            {
-                gameState === 'end' && (
-                    <div className="flex flex-col items-center justify-center h-full z-10 space-y-12 relative px-4 text-center">
-                        <div className="absolute inset-0 z-0 bg-red-900/40 animate-pulse mix-blend-overlay"></div>
 
-                        {/* 打敗壞人特效 */}
-                        <div className="relative w-64 h-64 md:w-80 md:h-80 mx-auto z-10">
-                            <div className="absolute inset-0 bg-yellow-400 rounded-full blur-[100px] opacity-80 animate-pulse"></div>
-                            <img src={currentVillain.url} alt={currentVillain.name} className="relative z-10 w-full h-full object-cover rounded-full border-[12px] border-red-500 shadow-[0_0_80px_rgba(239,68,68,1)] transform -rotate-12 scale-110 grayscale brightness-50" />
-                            <div className="absolute inset-0 z-20 flex items-center justify-center">
-                                <span className="text-[150px] md:text-[200px] font-black text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)] transform rotate-12">💥</span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 z-10">
-                            <h1 className="text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)] leading-tight">
-                                成功擊敗<br />{currentVillain.name}！
-                            </h1>
-                            <p className="text-4xl font-bold text-yellow-100">你是真正的旋風大師！</p>
-                        </div>
-
-                        <div className="flex flex-col gap-6 z-10 mt-8 w-full max-w-md">
-                            {level === 1 ? (
-                                <button
-                                    onClick={startLevel2}
-                                    className="group relative px-10 py-6 bg-red-600 hover:bg-red-500 text-white rounded-[2rem] font-black text-3xl shadow-[0_0_40px_rgba(239,68,68,0.8)] transition-all hover:scale-110 active:scale-95 border-b-8 border-red-800 animate-bounce"
-                                >
-                                    <span>下一關：進階挑戰！</span>
-                                </button>
-                            ) : level === 2 ? (
-                                <button
-                                    onClick={startLevel3}
-                                    className="group relative px-10 py-6 bg-purple-600 hover:bg-purple-500 text-white rounded-[2rem] font-black text-3xl shadow-[0_0_40px_rgba(147,51,234,0.8)] transition-all hover:scale-110 active:scale-95 border-b-8 border-purple-900 animate-bounce"
-                                >
-                                    <span>解鎖第三關詞庫！</span>
-                                </button>
-                            ) : (level === 3 && selectedSubLevel !== 'all' && selectedSubLevel !== 'custom') ? (
-                                <button
-                                    onClick={() => {
-                                        const curIdx = LEVEL_3_PRESETS.findIndex(p => p.name === selectedSubLevel);
-                                        if (curIdx < LEVEL_3_PRESETS.length - 1) {
-                                            const nextLesson = LEVEL_3_PRESETS[curIdx + 1];
-                                            startSubLevel(nextLesson.words, nextLesson.name);
-                                        } else {
-                                            goHome();
-                                        }
-                                    }}
-                                    className="group relative px-10 py-6 bg-green-600 hover:bg-green-500 text-white rounded-[2rem] font-black text-3xl shadow-[0_0_40px_rgba(22,163,74,0.8)] transition-all hover:scale-110 active:scale-95 border-b-8 border-green-800 animate-bounce"
-                                >
-                                    <span>挑戰下一課！</span>
-                                </button>
-                            ) : null}
-                            
-                            <button
-                                onClick={goHome}
-                                className="group relative px-10 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-[2rem] font-bold text-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center justify-center space-x-4 border-2 border-slate-600"
-                            >
-                                <Home className="w-8 h-8" />
-                                <span>返回主頁</span>
-                            </button>
-                        </div>
-                    </div>
-                )
-            }
 
             {/* ===================== 設定畫面 ===================== */}
             {
@@ -1419,6 +1409,41 @@ export default function App() {
                                     貼上您的 Google Apps Script Web App URL 以啟用答題紀錄功能。
                                 </p>
                             </div>
+
+                            {/* 選擇英雄角色 */}
+                            <div className="space-y-6 pt-6 border-t border-slate-800">
+                                <label className="text-2xl font-bold flex items-center gap-3">
+                                    👤 選擇冒險英雄
+                                </label>
+                                <div className="grid grid-cols-3 gap-4">
+                                    {CHARACTERS.map(char => (
+                                        <button
+                                            key={char.skin}
+                                            onClick={() => {
+                                                setHeroSkin(char.skin);
+                                                speak(`我係，${char.name}！出發啦！`);
+                                            }}
+                                            className={`relative p-2 rounded-2xl border-4 transition-all ${
+                                                heroSkin === char.skin 
+                                                ? 'border-yellow-400 bg-slate-700 shadow-lg' 
+                                                : 'border-transparent bg-slate-800 hover:border-slate-600'
+                                            }`}
+                                        >
+                                            <div className="aspect-square rounded-xl overflow-hidden mb-2">
+                                                <img src={char.url} className="w-full h-full object-cover" alt={char.name} />
+                                            </div>
+                                            <div className={`text-sm font-black ${heroSkin === char.skin ? 'text-yellow-400' : 'text-slate-400'}`}>
+                                                {char.name}
+                                            </div>
+                                            {heroSkin === char.skin && (
+                                                <div className="absolute -top-2 -right-2 bg-yellow-400 text-slate-950 rounded-full p-1 shadow-md">
+                                                    <Check className="w-4 h-4" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )
@@ -1512,94 +1537,7 @@ export default function App() {
                 )
             }
 
-            {/* ===================== 第三關子選單 ===================== */}
-            {
-                gameState === 'level3select' && (
-                    <div className="flex flex-col h-full z-50 bg-slate-900/95 backdrop-blur-md relative text-white overflow-hidden">
-                        {/* 標題欄 */}
-                        <div className="p-8 flex items-center justify-between border-b-2 border-slate-800">
-                            <button onClick={goHome} className="p-3 rounded-full bg-slate-800 hover:bg-slate-700 transition">
-                                <ChevronLeft className="w-8 h-8" />
-                            </button>
-                            <h2 className="text-4xl font-black text-yellow-400">選擇學習課別</h2>
-                            <div className="w-14"></div> {/* 佔位平衡 */}
-                        </div>
 
-                        <div className="flex-1 overflow-y-auto p-6 md:p-12">
-                            <div className="max-w-6xl mx-auto space-y-12">
-
-                                {/* 預設課別區 */}
-                                <div className="space-y-6">
-                                    <h3 className="text-2xl font-bold text-slate-400 flex items-center gap-3">
-                                        <Info className="w-6 h-6" /> 按課本選擇
-                                    </h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                        <button
-                                            onClick={() => startSubLevel(WORDS_LEVEL_3_ALL, 'all')}
-                                            className="p-5 bg-red-600/20 border-2 border-red-500/50 rounded-2xl hover:bg-red-600/40 transition-all text-xl font-bold col-span-2"
-                                        >
-                                            🔥 全部隨機挑戰
-                                        </button>
-                                        {LEVEL_3_PRESETS.map((preset, idx) => {
-                                            const isLocked = idx > 0 && !completedLevels.subLevels.includes(LEVEL_3_PRESETS[idx - 1].name);
-                                            const isCompleted = completedLevels.subLevels.includes(preset.name);
-                                            
-                                            return (
-                                                <button
-                                                    key={preset.name}
-                                                    onClick={() => !isLocked && startSubLevel(preset.words, preset.name)}
-                                                    className={`p-4 rounded-2xl border-2 transition-all text-lg relative ${
-                                                        isLocked 
-                                                        ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed grayscale' 
-                                                        : isCompleted 
-                                                            ? 'bg-green-900/30 border-green-500/50 text-green-300 hover:bg-green-800/40' 
-                                                            : 'bg-slate-800 border-slate-700 text-white hover:border-yellow-500/50 hover:bg-slate-700'
-                                                    }`}
-                                                >
-                                                    {preset.name}
-                                                    {isLocked && <span className="absolute top-1 right-1 text-xs">🔒</span>}
-                                                    {isCompleted && <span className="absolute top-1 right-1 text-xs text-green-400">✅</span>}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                <hr className="border-slate-800" />
-
-                                {/* 自定義字詞區 */}
-                                <div className="space-y-6">
-                                    <h3 className="text-2xl font-bold text-slate-400 flex items-center gap-3">
-                                        <Plus className="w-6 h-6" /> 自定義題目
-                                    </h3>
-                                    <div className="bg-slate-800/50 p-6 rounded-3xl border-2 border-slate-700 space-y-4">
-                                        <p className="text-slate-400">在這裡貼上一段文字（用逗號或空格分開），即可開始自訂挑戰！</p>
-                                        <textarea
-                                            placeholder="例如：蘋果, 香蕉, 橙, 西瓜"
-                                            className="w-full h-32 bg-slate-900 border-2 border-slate-700 rounded-2xl p-4 text-xl focus:border-yellow-500 outline-none transition-all"
-                                            id="custom-words-input"
-                                        ></textarea>
-                                        <button
-                                            onClick={() => {
-                                                const val = document.getElementById('custom-words-input').value;
-                                                const words = val.split(/[ ,，\n]+/).filter(w => w.trim() !== '');
-                                                if (words.length < 3) {
-                                                    alert("請至少輸入 3 個詞彙！");
-                                                    return;
-                                                }
-                                                startSubLevel(words, 'custom');
-                                            }}
-                                            className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white font-black text-2xl rounded-2xl transition-all shadow-lg"
-                                        >
-                                            開始自訂挑戰
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
 
             {/* Level Complete Summary Screen */}
             {gameState === 'level_complete' && (
@@ -1654,11 +1592,19 @@ export default function App() {
                              </div>
 
                              <button 
-                                onClick={goHome} 
+                                onClick={() => setGameState('map')} 
                                 className="w-full py-5 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-slate-900 font-black text-2xl rounded-2xl shadow-[0_10px_0_rgb(180,130,0)] active:translate-y-1 active:shadow-none transition-all duration-100 flex items-center justify-center gap-3"
                              >
+                                <Play className="w-6 h-6 fill-slate-900" />
+                                繼續冒險
+                             </button>
+
+                             <button 
+                                onClick={goHome} 
+                                className="w-full py-4 bg-slate-800/50 hover:bg-slate-800 text-slate-400 font-bold text-xl rounded-2xl transition-all flex items-center justify-center gap-3 border border-white/5"
+                             >
                                 <Home className="w-6 h-6" />
-                                返回總部
+                                返回主頁
                              </button>
                         </div>
                         
