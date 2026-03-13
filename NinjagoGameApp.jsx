@@ -339,7 +339,10 @@ export default function App() {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [audioAllowed, setAudioAllowed] = useState(false);
     const [sessionWrongWords, setSessionWrongWords] = useState([]);
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(() => {
+        const saved = localStorage.getItem('ninjago_user');
+        return saved ? JSON.parse(saved) : null;
+    });
     const [newlyUnlocked, setNewlyUnlocked] = useState(null); // tracking for unlock animation
     const [heroSkin, setHeroSkin] = useState(() => localStorage.getItem('heroSkin') || 'kai');
 
@@ -383,10 +386,10 @@ export default function App() {
             const targetNode = MAP_NODES[Math.min(currentIdx, MAP_NODES.length - 1)];
             
             if (targetNode) {
-                // 延遲一點點確保容器已經渲染並具有正確的寬高
-                setTimeout(() => {
+                // 使用稍微長一點的延遲並嘗試多次，確保容器已完全渲染
+                const scrollTask = () => {
                     const container = mapScrollRef.current;
-                    if (container) {
+                    if (container && container.clientHeight > 0) {
                         const targetY = targetNode.y - container.clientHeight / 2;
                         const targetX = targetNode.x - container.clientWidth / 2;
                         
@@ -395,8 +398,17 @@ export default function App() {
                             left: targetX,
                             behavior: 'smooth'
                         });
+                        return true;
                     }
-                }, 300);
+                    return false;
+                };
+
+                // 立即嘗試一次，如果失敗 300ms 後再試
+                if (!scrollTask()) {
+                    setTimeout(scrollTask, 300);
+                }
+                // 為了保險，1000ms 後再校準一次 (處理圖片加載導致的佈局變化)
+                setTimeout(scrollTask, 1000);
             }
         }
     }, [gameState, completedLevels.subLevels.length]);
@@ -493,6 +505,7 @@ export default function App() {
     const handleCredentialResponse = (response) => {
         const userObj = parseJwt(response.credential);
         setUser(userObj);
+        localStorage.setItem('ninjago_user', JSON.stringify(userObj));
         // Sync data from sheet after login
         syncFromGoogleSheets(userObj.email);
     };
@@ -1023,7 +1036,10 @@ export default function App() {
                                         <p className="text-white font-bold leading-none">{user.name}</p>
                                         <p className="text-yellow-400 text-xs">{user.email}</p>
                                     </div>
-                                    <button onClick={() => setUser(null)} className="ml-2 text-white/50 hover:text-white"><X className="w-5 h-5"/></button>
+                                    <button onClick={() => {
+                                        setUser(null);
+                                        localStorage.removeItem('ninjago_user');
+                                    }} className="ml-2 text-white/50 hover:text-white"><X className="w-5 h-5"/></button>
                                 </div>
                             )}
                         </div>
