@@ -780,6 +780,36 @@ export default function App() {
 
     return (
         <div className="relative w-full min-h-[100dvh] bg-slate-900 overflow-x-hidden overflow-y-auto font-sans select-none flex flex-col md:overflow-hidden">
+            {/* Compulsory Login Overlay */}
+            {!user && (
+                <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+                    <div className="max-w-md w-full space-y-8 animate-ninja-pop">
+                        <div className="space-y-4">
+                            <h2 className="text-xl text-yellow-300 font-bold tracking-widest drop-shadow-md">Ninjago Core Authentication</h2>
+                            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-yellow-600 drop-shadow-lg leading-tight mb-8">
+                                忍者身分<br />驗證
+                            </h1>
+                            <p className="text-slate-300 text-lg">歡迎來到旋風忍術學院！<br/>請先登錄以開始訓練並同步你的進度。</p>
+                        </div>
+                        
+                        <div className="flex flex-col items-center gap-6 py-8">
+                            <div id="googleBtn"></div>
+                        </div>
+
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left space-y-3">
+                            <h3 className="text-yellow-400 font-bold flex items-center gap-2">
+                                <Settings className="w-4 h-4" /> 設定提示 (設定一次即可)
+                            </h3>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                1. 請確保你在 Google Cloud 控制台已建立 <b>OAuth 2.0 Client ID</b>。<br/>
+                                2. 將 <code>https://ninjago-game.vercel.app</code> 加入授權來源。<br/>
+                                3. 更新程式碼中的 <code>client_id</code> 即可解決 "Invalid Client" 錯誤。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* 內聯全局動畫樣式設計 */}
             <style>{`
         @keyframes float {
@@ -934,11 +964,9 @@ export default function App() {
                         </h1>
                     </div>
 
-                    {/* Google Login Section */}
+                    {/* User Profile (If logged in) */}
                     <div className="z-20 flex flex-col items-center gap-4">
-                        {!user ? (
-                            <div id="googleBtn"></div>
-                        ) : (
+                        {user && (
                             <div className="flex items-center gap-4 bg-white/10 p-3 rounded-full border border-white/20">
                                 <img src={user.picture} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400" />
                                 <div className="text-left">
