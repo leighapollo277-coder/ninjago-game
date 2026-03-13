@@ -881,6 +881,19 @@ export default function App() {
         .water-wave { animation: water-wave 2s ease-in-out infinite; }
         .shadow-mist { animation: shadow-mist 3s ease-in-out infinite; }
         
+        @keyframes lock-open {
+          0% { transform: scale(1); rotate: 0deg; }
+          40% { transform: scale(1.2); rotate: -15deg; }
+          100% { transform: scale(0); rotate: 360deg; opacity: 0; }
+        }
+        .lock-open-anim { animation: lock-open 0.8s ease-in-out forwards; }
+
+        @keyframes unlock-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(251,191,36,0.3); }
+          50% { box-shadow: 0 0 50px rgba(251,191,36,0.8); }
+        }
+        .unlock-glow { animation: unlock-glow 2s infinite; }
+        
         .shuriken-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
         
         /* 戰鬥模式專用動畫 */
@@ -987,10 +1000,10 @@ export default function App() {
                                 startGame(1);
                                 if (newlyUnlocked === 1) setNewlyUnlocked(null);
                             }}
-                            className="flex-1 group relative px-8 py-6 bg-green-600 hover:bg-green-500 text-white rounded-3xl font-black text-3xl shadow-[0_10px_30px_rgba(22,163,74,0.5)] transition-all hover:scale-105 active:scale-95 border-b-8 border-green-800 flex flex-col items-center gap-3"
+                            className={`flex-1 group relative px-8 py-6 bg-green-600 hover:bg-green-500 text-white rounded-3xl font-black text-3xl shadow-[0_10px_30px_rgba(22,163,74,0.5)] transition-all hover:scale-105 active:scale-95 border-b-8 border-green-800 flex flex-col items-center gap-3 ${newlyUnlocked === 1 ? 'unlock-glow' : ''}`}
                         >
                             {newlyUnlocked === 1 && (
-                                <div className="absolute inset-0 bg-yellow-400/30 animate-[ping_2s_infinite] rounded-3xl z-10 pointer-events-none" />
+                                <div className="absolute -top-4 -right-4 z-20 text-5xl lock-open-anim">🔓</div>
                             )}
                             <span className="text-xl opacity-80">LEVEL 1</span>
                             <span>基礎識字</span>
@@ -1014,10 +1027,10 @@ export default function App() {
                                 completedLevels.levels.includes(1) 
                                 ? 'bg-red-600 hover:bg-red-500 text-white border-red-800 shadow-[0_10px_30px_rgba(220,38,38,0.5)]' 
                                 : 'bg-slate-700 text-slate-400 border-slate-900 opacity-60 grayscale cursor-not-allowed'
-                            }`}
+                            } ${newlyUnlocked === 2 ? 'unlock-glow' : ''}`}
                         >
                             {newlyUnlocked === 2 && (
-                                <div className="absolute inset-0 bg-yellow-400/30 animate-[ping_2s_infinite] rounded-3xl z-10 pointer-events-none" />
+                                <div className="absolute -top-4 -right-4 z-20 text-5xl lock-open-anim">🔓</div>
                             )}
                             <div className="flex items-center gap-2">
                                 <span className="text-xl opacity-80">LEVEL 2</span>
@@ -1049,10 +1062,10 @@ export default function App() {
                                 completedLevels.levels.includes(2) 
                                 ? 'bg-purple-700 hover:bg-purple-600 text-white border-purple-900 shadow-[0_10px_30px_rgba(126,34,206,0.5)]' 
                                 : 'bg-slate-700 text-slate-400 border-slate-900 opacity-60 grayscale cursor-not-allowed'
-                            }`}
+                            } ${newlyUnlocked === 3 ? 'unlock-glow' : ''}`}
                         >
                             {newlyUnlocked === 3 && (
-                                <div className="absolute inset-0 bg-yellow-400/30 animate-[ping_2s_infinite] rounded-3xl z-10 pointer-events-none" />
+                                <div className="absolute -top-4 -right-4 z-20 text-5xl lock-open-anim">🔓</div>
                             )}
                             <div className="flex items-center gap-2">
                                 <span className="text-xl opacity-80">LEVEL 3</span>
@@ -1609,23 +1622,39 @@ export default function App() {
 
                              <div className="flex flex-col gap-4 items-center">
                                 <div className="text-slate-300 font-bold text-lg md:text-xl">目前戰績進度</div>
-                                <div className="w-full bg-slate-700/50 rounded-full h-8 relative overflow-hidden border-2 border-white/10 p-1">
-                                    <div 
-                                        className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full transition-all duration-1000 ease-out"
-                                        style={{ width: `${(completedLevels.levels.length / 3) * 100}%` }}
-                                    ></div>
-                                </div>
-                                <div className="text-white font-black text-xl md:text-2xl mt-2 drop-shadow-md">
-                                    {completedLevels.levels.length === 3 
-                                        ? "你已經征服了所有關卡！🎉" 
-                                        : `還剩下 ${3 - completedLevels.levels.length} 關剩餘任務！`}
-                                </div>
+                                {(() => {
+                                    const totalUnits = 2 + LEVEL_3_PRESETS.length;
+                                    const completedUnits = (completedLevels.levels.includes(1) ? 1 : 0) + 
+                                                         (completedLevels.levels.includes(2) ? 1 : 0) + 
+                                                         completedLevels.subLevels.length;
+                                    const progressPercent = (completedUnits / totalUnits) * 100;
+                                    const remaining = totalUnits - completedUnits;
+
+                                    return (
+                                        <React.Fragment>
+                                            <div className="w-full bg-slate-700/50 rounded-full h-8 relative overflow-hidden border-2 border-white/10 p-1">
+                                                <div 
+                                                    className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full transition-all duration-1000 ease-out relative"
+                                                    style={{ width: `${progressPercent}%` }}
+                                                >
+                                                    <div className="absolute inset-0 bg-white/20 animate-shimmer"></div>
+                                                </div>
+                                            </div>
+                                            <div className="text-white font-black text-xl md:text-2xl mt-2 drop-shadow-md">
+                                                {remaining === 0 
+                                                    ? "你已經征服了所有關卡！🎉" 
+                                                    : `還剩下 ${remaining} 個任務等待解鎖！`}
+                                            </div>
+                                        </React.Fragment>
+                                    );
+                                })()}
                              </div>
 
                              <button 
                                 onClick={goHome} 
-                                className="w-full py-5 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-slate-900 font-black text-2xl rounded-2xl shadow-[0_10px_0_rgb(180,130,0)] active:translate-y-1 active:shadow-none transition-all duration-100"
+                                className="w-full py-5 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-slate-900 font-black text-2xl rounded-2xl shadow-[0_10px_0_rgb(180,130,0)] active:translate-y-1 active:shadow-none transition-all duration-100 flex items-center justify-center gap-3"
                              >
+                                <Home className="w-6 h-6" />
                                 返回總部
                              </button>
                         </div>
