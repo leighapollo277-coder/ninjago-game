@@ -1,0 +1,8 @@
+# Exclude backup scripts and local logs
+scripts/
+backup_to_gdrive.sh
+*.log
+.DS_Store
+NinjagoLogService.gs
+node_modules
+.git
