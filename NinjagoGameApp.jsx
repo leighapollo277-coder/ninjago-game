@@ -922,6 +922,7 @@ export default function App() {
 
         .shuriken-spin { animation: spin-glow 1.5s linear infinite; }
         .ninja-pop-anim { animation: ninja-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .shimmer-anim { animation: shimmer 2s infinite; }
         .player-stagger { animation: stagger 0.5s cubic-bezier(.36,.07,.19,.97) both; }
         
         /* 自定義 Slider 樣式 */
@@ -1603,7 +1604,7 @@ export default function App() {
             {/* Level Complete Summary Screen */}
             {gameState === 'level_complete' && (
                 <div className="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-6 text-center overflow-hidden">
-                    <div className="relative animate-ninja-pop max-w-2xl w-full">
+                    <div className="relative ninja-pop-anim max-w-2xl w-full">
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-yellow-400/20 blur-[100px] rounded-full animate-pulse"></div>
                         
                         <div className="relative z-10 space-y-8 bg-slate-800/50 border border-white/10 p-8 md:p-12 rounded-[40px] shadow-2xl">
@@ -1623,29 +1624,31 @@ export default function App() {
                              <div className="flex flex-col gap-4 items-center">
                                 <div className="text-slate-300 font-bold text-lg md:text-xl">目前戰績進度</div>
                                 {(() => {
-                                    const totalUnits = 2 + LEVEL_3_PRESETS.length;
-                                    const completedUnits = (completedLevels.levels.includes(1) ? 1 : 0) + 
-                                                         (completedLevels.levels.includes(2) ? 1 : 0) + 
-                                                         completedLevels.subLevels.length;
-                                    const progressPercent = (completedUnits / totalUnits) * 100;
+                                    const levels = completedLevels?.levels || [];
+                                    const subLevels = completedLevels?.subLevels || [];
+                                    const totalUnits = 2 + (LEVEL_3_PRESETS?.length || 0);
+                                    const completedUnits = (levels.includes(1) ? 1 : 0) + 
+                                                         (levels.includes(2) ? 1 : 0) + 
+                                                         subLevels.length;
+                                    const progressPercent = totalUnits > 0 ? (completedUnits / totalUnits) * 100 : 0;
                                     const remaining = totalUnits - completedUnits;
 
                                     return (
-                                        <React.Fragment>
+                                        <>
                                             <div className="w-full bg-slate-700/50 rounded-full h-8 relative overflow-hidden border-2 border-white/10 p-1">
                                                 <div 
                                                     className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full transition-all duration-1000 ease-out relative"
                                                     style={{ width: `${progressPercent}%` }}
                                                 >
-                                                    <div className="absolute inset-0 bg-white/20 animate-shimmer"></div>
+                                                    <div className="absolute inset-0 bg-white/20 shimmer-anim"></div>
                                                 </div>
                                             </div>
                                             <div className="text-white font-black text-xl md:text-2xl mt-2 drop-shadow-md">
-                                                {remaining === 0 
+                                                {remaining <= 0 
                                                     ? "你已經征服了所有關卡！🎉" 
                                                     : `還剩下 ${remaining} 個任務等待解鎖！`}
                                             </div>
-                                        </React.Fragment>
+                                        </>
                                     );
                                 })()}
                              </div>
@@ -1665,6 +1668,6 @@ export default function App() {
                     </div>
                 </div>
             )}
-        </div >
+        </div>
     );
 }
