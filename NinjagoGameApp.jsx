@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy } from 'lucide-react';
 
 // === 資料與常數準備 ===
@@ -373,6 +373,33 @@ export default function App() {
         }
         return data;
     });
+
+    const mapScrollRef = useRef(null);
+
+    // 當進入地圖時，自動滾動到當前進度位置
+    useEffect(() => {
+        if (gameState === 'map' && mapScrollRef.current) {
+            const currentIdx = completedLevels.subLevels.length;
+            const targetNode = MAP_NODES[Math.min(currentIdx, MAP_NODES.length - 1)];
+            
+            if (targetNode) {
+                // 延遲一點點確保容器已經渲染並具有正確的寬高
+                setTimeout(() => {
+                    const container = mapScrollRef.current;
+                    if (container) {
+                        const targetY = targetNode.y - container.clientHeight / 2;
+                        const targetX = targetNode.x - container.clientWidth / 2;
+                        
+                        container.scrollTo({
+                            top: targetY,
+                            left: targetX,
+                            behavior: 'smooth'
+                        });
+                    }
+                }, 300);
+            }
+        }
+    }, [gameState, completedLevels.subLevels.length]);
 
     const currentVillain = level === 1 ? VILLAIN_LEVEL_1 : (level === 2 ? VILLAIN_LEVEL_2 : VILLAIN_LEVEL_3);
 
@@ -1092,7 +1119,10 @@ export default function App() {
                         </div>
 
                         {/* 地圖滾動區 */}
-                        <div className="flex-1 overflow-auto bg-[url('/assets/home_bg.png')] bg-fixed bg-cover relative scroll-smooth scrollbar-hide">
+                        <div 
+                            ref={mapScrollRef}
+                            className="flex-1 overflow-auto bg-[url('/assets/home_bg.png')] bg-fixed bg-cover relative scroll-smooth scrollbar-hide"
+                        >
                             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px]"></div>
                             
                             <div className="relative py-20 mx-auto" style={{ width: '1000px', height: `${MAP_NODES[MAP_NODES.length-1].y + 400}px` }}>
