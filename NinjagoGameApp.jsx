@@ -362,7 +362,16 @@ export default function App() {
     const [targetScore, setTargetScore] = useState(10);
     const [completedLevels, setCompletedLevels] = useState(() => {
         const saved = localStorage.getItem('completedLevels');
-        return saved ? JSON.parse(saved) : { levels: [], subLevels: [] };
+        if (!saved) return { levels: [], subLevels: [] };
+        
+        let data = JSON.parse(saved);
+        // 資料遷移: 將 "課" 統一轉換為 "關"
+        if (data.subLevels) {
+            data.subLevels = data.subLevels.map(name => 
+                typeof name === 'string' ? name.replace('課', '關') : name
+            );
+        }
+        return data;
     });
 
     const currentVillain = level === 1 ? VILLAIN_LEVEL_1 : (level === 2 ? VILLAIN_LEVEL_2 : VILLAIN_LEVEL_3);
@@ -1108,20 +1117,34 @@ export default function App() {
                                         const isNextCompleted = completedLevels.subLevels.includes(nextNode.name);
                                         
                                         // 貝茲曲線點
-                                        const cp1y = node.y + (nextNode.y - node.y) / 2;
-                                        const cp2y = node.y + (nextNode.y - node.y) / 2;
+                                        const cp1y = node.y + (nextNode.y - node.y) * 0.5;
+                                        const cp2y = node.y + (nextNode.y - node.y) * 0.5;
                                         
                                         return (
-                                            <path
-                                                key={`path-${i}`}
-                                                d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
-                                                fill="none"
-                                                stroke={isCompleted && isNextCompleted ? "#22c55e" : "#475569"}
-                                                strokeWidth="12"
-                                                strokeDasharray={isCompleted && isNextCompleted ? "0" : "20,15"}
-                                                strokeLinecap="round"
-                                                style={{ filter: isCompleted && isNextCompleted ? 'url(#glow)' : 'none', opacity: 0.6 }}
-                                            />
+                                            <g key={`group-${i}`}>
+                                                {/* 底層陰影路徑 */}
+                                                <path
+                                                    d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
+                                                    fill="none"
+                                                    stroke="rgba(0,0,0,0.3)"
+                                                    strokeWidth="16"
+                                                    strokeLinecap="round"
+                                                    className="translate-y-2 translate-x-1"
+                                                />
+                                                {/* 主路徑 */}
+                                                <path
+                                                    d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
+                                                    fill="none"
+                                                    stroke={isCompleted && isNextCompleted ? "#22c55e" : "#334155"}
+                                                    strokeWidth="12"
+                                                    strokeDasharray={isCompleted && isNextCompleted ? "0" : "15,20"}
+                                                    strokeLinecap="round"
+                                                    style={{ 
+                                                        filter: isCompleted && isNextCompleted ? 'url(#glow)' : 'none',
+                                                        transition: 'all 1s ease-in-out'
+                                                    }}
+                                                />
+                                            </g>
                                         );
                                     })}
                                 </svg>
