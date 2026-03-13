@@ -296,14 +296,20 @@ export default function App() {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [audioAllowed, setAudioAllowed] = useState(false);
     const [sessionWrongWords, setSessionWrongWords] = useState([]);
+    const [user, setUser] = useState(null);
 
     // --- 新增設定與子關卡狀態 ---
     const [bgmVolume, setBgmVolume] = useState(() => Number(localStorage.getItem('bgmVolume')) || 40);
     const [sfxVolume, setSfxVolume] = useState(() => Number(localStorage.getItem('sfxVolume')) || 80);
     const [speechRate, setSpeechRate] = useState(() => Number(localStorage.getItem('speechRate')) || 0.8);
     const [questionsPerLevel, setQuestionsPerLevel] = useState(() => localStorage.getItem('questionsPerLevel') || "10"); // "10", "20", "30", "max"
-    const [globalBattleMode, setGlobalBattleMode] = useState(() => JSON.parse(localStorage.getItem('globalBattleMode')) || false);
-    const [googleSheetsUrl, setGoogleSheetsUrl] = useState(() => localStorage.getItem('googleSheetsUrl') || "");
+    const [globalBattleMode, setGlobalBattleMode] = useState(() => {
+        const saved = localStorage.getItem('globalBattleMode');
+        return saved !== null ? JSON.parse(saved) : true; // Default to true
+    });
+    const [googleSheetsUrl, setGoogleSheetsUrl] = useState(() => {
+        return localStorage.getItem('googleSheetsUrl') || "https://script.google.com/macros/s/AKfycbyDgDV4YLRaa1xfPPo1XkRMZGsVH09548XRIeM4KPYKwuT_Yb8uKLFLDd-kXbGW4IPz/exec";
+    });
     const [customWordSets, setCustomWordSets] = useState(() => JSON.parse(localStorage.getItem('customWordSets')) || []);
     const [wordStats, setWordStats] = useState(() => JSON.parse(localStorage.getItem('wordStats')) || {});
     const [selectedSubLevel, setSelectedSubLevel] = useState('all'); // lesson name or set id or 'all'
@@ -386,12 +392,45 @@ export default function App() {
         }
     }, [speechRate]);
     
+    // --- Google Auth 系統 ---
+    useEffect(() => {
+        /* global google */
+        if (typeof google !== 'undefined') {
+            google.accounts.id.initialize({
+                client_id: "713361413807-6f0o5a0s6a1c8m9r2k2v4k4o1v6p4p4.apps.googleusercontent.com", // Placeholder: User should replace with their own or I can suggest one
+                callback: handleCredentialResponse
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("googleBtn"),
+                { theme: "outline", size: "large", shape: "pill" }
+            );
+        }
+    }, [gameState]);
+
+    const handleCredentialResponse = (response) => {
+        const userObj = parseJwt(response.credential);
+        setUser(userObj);
+        // Sync data from sheet after login
+        syncFromGoogleSheets(userObj.email);
+    };
+
+    const parseJwt = (token) => {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    };
+
     // --- 紀錄系統 ---
     const logToGoogleSheets = useCallback((targetWord, selectedWord, isCorrect, eventType = "ANSWER") => {
         if (!googleSheetsUrl) return;
         
         const data = {
             timestamp: new Date().toISOString(),
+            userEmail: user ? user.email : "anonymous",
+            userName: user ? user.name : "Anonymous",
             event: eventType,
             level: level,
             subLevel: selectedSubLevel,
@@ -406,7 +445,48 @@ export default function App() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         }).catch(err => console.error("Logging failed:", err));
-    }, [googleSheetsUrl, level, selectedSubLevel]);
+    }, [googleSheetsUrl, level, selectedSubLevel, user]);
+
+    // --- 同步系統 ---
+    const syncToGoogleSheets = useCallback(() => {
+        if (!googleSheetsUrl || !user) return;
+        const settings = {
+            bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, completedLevels, wordStats
+        };
+        const data = {
+            userEmail: user.email,
+            event: "SYNC_SETTINGS",
+            settings: JSON.stringify(settings)
+        };
+        fetch(googleSheetsUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(data)
+        });
+    }, [googleSheetsUrl, user, bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, completedLevels, wordStats]);
+
+    const syncFromGoogleSheets = (email) => {
+        if (!googleSheetsUrl) return;
+        fetch(`${googleSheetsUrl}?userEmail=${email}&event=GET_SETTINGS`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.settings) {
+                    const s = JSON.parse(data.settings);
+                    setBgmVolume(s.bgmVolume);
+                    setSfxVolume(s.sfxVolume);
+                    setSpeechRate(s.speechRate);
+                    setQuestionsPerLevel(s.questionsPerLevel);
+                    setGlobalBattleMode(s.globalBattleMode);
+                    setCompletedLevels(s.completedLevels);
+                    setWordStats(s.wordStats);
+                }
+            }).catch(e => console.log("Fetch settings failed", e));
+    };
+
+    // 監聽設定變化並同步
+    useEffect(() => {
+        if (user) syncToGoogleSheets();
+    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, completedLevels, wordStats, user, syncToGoogleSheets]);
 
     // --- 全螢幕切換 ---
     const toggleFullscreen = () => {
@@ -852,6 +932,22 @@ export default function App() {
                         <h1 className="text-5xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-yellow-600 drop-shadow-lg leading-tight">
                             忍者文字<br />大考驗
                         </h1>
+                    </div>
+
+                    {/* Google Login Section */}
+                    <div className="z-20 flex flex-col items-center gap-4">
+                        {!user ? (
+                            <div id="googleBtn"></div>
+                        ) : (
+                            <div className="flex items-center gap-4 bg-white/10 p-3 rounded-full border border-white/20">
+                                <img src={user.picture} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400" />
+                                <div className="text-left">
+                                    <p className="text-white font-bold leading-none">{user.name}</p>
+                                    <p className="text-yellow-400 text-xs">{user.email}</p>
+                                </div>
+                                <button onClick={() => setUser(null)} className="ml-2 text-white/50 hover:text-white"><X className="w-5 h-5"/></button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-6 z-10 w-full max-w-4xl px-4 justify-center">
