@@ -1268,13 +1268,13 @@ export default function App() {
                     </div>
 
                     {/* Cinematic Background */}
-                    <div className="absolute inset-0 z-0">
+                    <div className="absolute inset-0 z-0 overflow-hidden">
                         <img 
                             src="/assets/home_bg.png" 
-                            className="w-full h-full object-cover scale-105 animate-slow-zoom opacity-60" 
+                            className="w-full h-full object-cover scale-105 animate-slow-zoom opacity-80 filter saturate-125" 
                             alt="Ninjago Experience"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/50"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/40"></div>
                     </div>
 
                     {/* Top Control - Removed redundant Settings icon */}
