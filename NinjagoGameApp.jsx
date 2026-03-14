@@ -127,21 +127,16 @@ const MAP_WORLDS = [
 
 // === 產生單一章節地香圖節點 (Zigzag進適單個视區內) ===
 const generateChapterNodes = (levels) => {
-    const cols = [200, 500, 800]; // 3欄位置
-    const rowHeight = 130;
-    const startY = 120;
+    const cols = [250, 500, 750]; // Centered 3-column layout
+    const rowHeight = 160;        // Increased vertical spacing
+    const startY = 150;           // Top margin
     return levels.map((level, idx) => {
-        const row = Math.floor(idx / 3);
-        const colIdx = idx % 2 === 0 
-            ? (row % 2 === 0 ? idx % 3 : 2 - (idx % 3))
-            : (row % 2 === 0 ? idx % 3 : 2 - (idx % 3));
-        const x = cols[idx % 3 === 0 ? 0 : idx % 3 === 1 ? 1 : 2];
-        // Zigzag: even rows L->R, odd rows R->L
         const rowIndex = Math.floor(idx / 3);
         const posInRow = idx % 3;
+        // Zigzag: L->R then R->L
         const colX = rowIndex % 2 === 0 
-            ? cols[posInRow]   // L-to-R
-            : cols[2 - posInRow]; // R-to-L
+            ? cols[posInRow] 
+            : cols[2 - posInRow];
         const y = startY + rowIndex * rowHeight;
         return { ...level, x: colX, y, id: idx };
     });
@@ -1480,22 +1475,11 @@ export default function App() {
                                 <div className={`absolute inset-0 bg-gradient-to-br ${selectedWorld.overlayColor}`}></div>
                                 
                                 <div className="relative w-[1000px] h-full mx-auto" style={{ height: 'calc(100vh - 120px)' }}>
-                                    {/* 繪製連線 (SVG) */}
+                                    {/* SVG Paths Layer (Centered & Glow) */}
                                     <svg className="absolute inset-0 pointer-events-none z-0" style={{ width: '1000px', height: '100%' }}>
                                         <defs>
-                                            <linearGradient id="pathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.6" />
-                                                <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.2" />
-                                            </linearGradient>
-                                            <filter id="glow">
-                                                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                                                <feMerge>
-                                                    <feMergeNode in="coloredBlur"/>
-                                                    <feMergeNode in="SourceGraphic"/>
-                                                </feMerge>
-                                            </filter>
-                                            <filter id="nodeGlow">
-                                                <feGaussianBlur stdDeviation="8" result="blur"/>
+                                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                                <feGaussianBlur stdDeviation="3" result="blur"/>
                                                 <feMerge>
                                                     <feMergeNode in="blur"/>
                                                     <feMergeNode in="SourceGraphic"/>
@@ -1506,44 +1490,31 @@ export default function App() {
                                             const nextNode = selectedChapterNodes[i + 1];
                                             const isCompleted = completedLevels.subLevels.includes(node.name);
                                             const isNextCompleted = completedLevels.subLevels.includes(nextNode.name);
-                                            
                                             const cp1y = node.y + (nextNode.y - node.y) * 0.5;
                                             const cp2y = node.y + (nextNode.y - node.y) * 0.5;
                                             
                                             return (
                                                 <g key={`group-${i}`}>
-                                                    {/* Shadow layer for path */}
                                                     <path
                                                         d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
                                                         fill="none"
                                                         stroke="rgba(0,0,0,0.4)"
-                                                        strokeWidth="12"
+                                                        strokeWidth="10"
                                                         strokeLinecap="round"
                                                         className="translate-y-2 translate-x-1"
                                                     />
-                                                    {/* Glow layer for completed path */}
-                                                    {isCompleted && isNextCompleted && (
-                                                        <path
-                                                            d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
-                                                            fill="none"
-                                                            stroke={selectedWorld.id === 2 ? "#ef4444" : "#4ade80"}
-                                                            strokeWidth="10"
-                                                            strokeLinecap="round"
-                                                            style={{ filter: 'blur(8px)', opacity: 0.6 }}
-                                                        />
-                                                    )}
-                                                    {/* Main path layer */}
                                                     <path
                                                         d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
                                                         fill="none"
-                                                        stroke={isCompleted && isNextCompleted ? (selectedWorld.id === 2 ? "#ef4444" : "#4ade80") : "rgba(255,255,255,0.2)"}
-                                                        strokeWidth="6"
-                                                        strokeDasharray={isCompleted && isNextCompleted ? "0" : "12,18"}
+                                                        stroke={isCompleted && isNextCompleted ? (selectedWorld.id === 2 ? "#ef4444" : "#4ade80") : "white"}
+                                                        strokeWidth={isCompleted && isNextCompleted ? "5" : "3"}
+                                                        strokeDasharray={isCompleted && isNextCompleted ? "0" : "8,12"}
+                                                        opacity={isCompleted && isNextCompleted ? "1" : "0.2"}
                                                         strokeLinecap="round"
                                                         className={isCompleted && isNextCompleted ? "animate-path-flow" : ""}
                                                         style={{ 
                                                             filter: isCompleted && isNextCompleted ? 'url(#glow)' : 'none',
-                                                            transition: 'stroke 1s ease-in-out'
+                                                            transition: 'all 1.5s ease'
                                                         }}
                                                     />
                                                 </g>
@@ -1553,7 +1524,6 @@ export default function App() {
 
                                     {/* 繪製關卡點位 */}
                                     {selectedChapterNodes.map((node, idx) => {
-                                        // 關卡解鎖邏輯：全局索引判斷
                                         const globalIdx = node.id;
                                         const isLocked = globalIdx > 0 && !completedLevels.subLevels.includes(LEVEL_3_PRESETS[globalIdx - 1].name);
                                         const isCompleted = completedLevels.subLevels.includes(node.name);
@@ -1565,8 +1535,8 @@ export default function App() {
                                                 key={node.name}
                                                 className="absolute z-10 transition-all duration-700 animate-float-node"
                                                 style={{ 
-                                                    left: node.x, 
-                                                    top: node.y, 
+                                                    left: `${node.x}px`, 
+                                                    top: `${node.y}px`, 
                                                     transform: 'translate(-50%, -50%)',
                                                     '--float-duration': `${3 + idx * 0.2}s`
                                                 }}
@@ -1593,12 +1563,13 @@ export default function App() {
                                                         {isLocked ? (
                                                             <XCircle className="w-8 h-8 text-slate-600" />
                                                         ) : isCompleted ? (
-                                                            <div className="relative">
-                                                                {/* Ninja Shuriken Marker */}
-                                                                <svg viewBox="0 0 24 24" className="w-12 h-12 text-slate-300 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] animate-shuriken-impact">
-                                                                    <path fill="currentColor" d="M12,2L14.5,9H21.5L16,13.5L18.5,20.5L12,16L5.5,20.5L8,13.5L2.5,9H9.5L12,2Z" />
+                                                            <div className="relative translate-y-1">
+                                                                {/* Ninja Shuriken Marker (Sharp 4-Point Design) */}
+                                                                <svg viewBox="0 0 100 100" className="w-14 h-14 text-slate-100 drop-shadow-[0_5px_10px_rgba(0,0,0,1)] animate-shuriken-impact">
+                                                                    <path fill="currentColor" d="M50 5 L55 45 L95 50 L55 55 L50 95 L45 55 L5 50 L45 45 Z" />
+                                                                    <circle cx="50" cy="50" r="5" fill="black" />
                                                                 </svg>
-                                                                <div className="absolute -inset-2 bg-green-500/20 blur-xl rounded-full pulse-slow"></div>
+                                                                <div className="absolute inset-0 bg-green-400/30 blur-2xl rounded-full scale-150 animate-aura-pulse"></div>
                                                             </div>
                                                         ) : (
                                                             <span className={isActive ? 'text-yellow-400 text-3xl' : 'text-slate-400'}>{idx + 1}</span>
@@ -1616,23 +1587,29 @@ export default function App() {
 
                                                 {/* Player Indicator: The Hero Sprite & Flag */}
                                                 {isActive && (
-                                                    <div className="absolute -top-32 left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center">
+                                                    <div className="absolute -top-[110px] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none">
                                                         {/* Nobori Banner (War Flag) */}
-                                                        <div className="absolute -right-16 top-0 w-12 h-32 flex flex-col items-center animate-banner-wave">
-                                                            <div className="w-1 h-32 bg-amber-900 rounded-full"></div>
-                                                            <div className="absolute top-4 left-1 w-12 h-20 bg-yellow-500 border-2 border-amber-900 rounded-sm flex items-center justify-center shadow-lg">
-                                                                <span className="text-amber-950 font-black text-xl [writing-mode:vertical-rl]">{idx + 1}</span>
+                                                        <div className="absolute -right-14 -top-8 w-12 h-32 flex flex-col items-center animate-banner-wave origin-bottom">
+                                                            <div className="w-1.5 h-32 bg-amber-950 rounded-full border border-black/20"></div>
+                                                            <div className="absolute top-2 left-1.5 w-11 h-20 bg-gradient-to-b from-yellow-400 to-amber-500 border-2 border-amber-950 rounded-sm flex items-center justify-center shadow-2xl">
+                                                                <span className="text-amber-950 font-black text-2xl [writing-mode:vertical-rl] py-2">{idx + 1}</span>
                                                             </div>
                                                         </div>
 
-                                                        {/* Hero Aura */}
-                                                        <div className="w-32 h-32 relative">
-                                                            <div className="absolute inset-0 bg-yellow-400/30 blur-3xl rounded-full scale-125 pulse-slow"></div>
-                                                            <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-75 animate-pulse"></div>
-                                                            <img src={CHARACTERS.find(c => c.skin === heroSkin)?.url} alt="hero" className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
+                                                        {/* Hero Sticker with Premium Aura */}
+                                                        <div className="w-36 h-36 relative group">
+                                                            <div className="absolute inset-0 bg-yellow-400/40 blur-3xl rounded-full scale-110 animate-aura-pulse"></div>
+                                                            <div className="absolute inset-4 bg-white/30 blur-xl rounded-full animate-pulse transition-all group-hover:scale-150"></div>
+                                                            <img 
+                                                                src={CHARACTERS.find(c => c.skin === heroSkin)?.url} 
+                                                                alt="hero" 
+                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)] hover:scale-110 transition-transform duration-500" 
+                                                            />
                                                         </div>
-                                                        <div className="bg-yellow-400 text-slate-900 px-4 py-1.5 rounded-full font-black text-sm shadow-xl border-2 border-slate-900 whitespace-nowrap mt-2 animate-bounce uppercase tracking-widest leading-none">
-                                                            當前位置
+                                                        
+                                                        {/* Location Badge */}
+                                                        <div className="bg-yellow-400 text-slate-900 px-5 py-2 rounded-full font-black text-xs shadow-[0_10px_20px_rgba(0,0,0,0.4)] border-2 border-slate-900 whitespace-nowrap -mt-6 z-20 animate-bounce uppercase tracking-tighter">
+                                                            當前階段
                                                         </div>
                                                     </div>
                                                 )}
@@ -1649,38 +1626,7 @@ export default function App() {
                                         );
                                     })}
 
-                                    {/* Player Icon on current node */}
-                                    {(() => {
-                                        const firstUncompletedGlobalIdx = LEVEL_3_PRESETS.findIndex(node => !completedLevels.subLevels.includes(node.name));
-                                        const activeGlobalIdx = firstUncompletedGlobalIdx === -1 ? LEVEL_3_PRESETS.length - 1 : firstUncompletedGlobalIdx;
-                                        
-                                        // 檢查當前活動關卡是否在當前顯示的世界中
-                                        const worldStartIdx = selectedWorld.id * 11;
-                                        const worldEndIdx = (selectedWorld.id + 1) * 11;
-                                        
-                                        if (activeGlobalIdx >= worldStartIdx && activeGlobalIdx < worldEndIdx) {
-                                            const nodeInChapter = selectedChapterNodes[activeGlobalIdx - worldStartIdx];
-                                            return (
-                                                <div 
-                                                    className="absolute transition-all duration-1000 ease-in-out z-20 pointer-events-none"
-                                                    style={{ 
-                                                        left: nodeInChapter.x, 
-                                                        top: nodeInChapter.y,
-                                                        transform: 'translate(-50%, -100%)' 
-                                                    }}
-                                                >
-                                                    <div className="relative animate-bounce">
-                                                        <RealLegoImage 
-                                                            char={CHARACTERS.find(c => c.skin === heroSkin) || CHARACTERS[3]} 
-                                                            className="w-24 h-24 rounded-2xl border-4 border-white shadow-[0_0_40px_rgba(255,255,255,0.5)] bg-slate-800"
-                                                        />
-                                                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 bg-white rotate-45 transform skew-x-12 shadow-lg"></div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
+                                    {/* Player Icon on current node (REDUNDANT - removed) */}
                                 </div>
                             </div>
                         </div>

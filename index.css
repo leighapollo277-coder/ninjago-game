@@ -36,31 +36,43 @@
 }
 
 @keyframes float-platform {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0% { transform: translateY(0) rotateX(10deg); }
+  50% { transform: translateY(-12px) rotateX(15deg); }
+  100% { transform: translateY(0) rotateX(10deg); }
 }
 
 .animate-float-node {
-  animation: float-platform var(--float-duration, 3s) infinite ease-in-out;
+  animation: float-platform var(--float-duration, 4s) infinite ease-in-out;
+  transform-style: preserve-3d;
 }
 
-@keyframes shuriken-swish {
-  0% { transform: scale(3) rotate(720deg) translate(-100px, -100px); opacity: 0; }
+@keyframes shuriken-impact {
+  0% { transform: scale(4) rotate(720deg) translate(-100px, -100px); opacity: 0; }
+  70% { transform: scale(0.8) rotate(-10deg) translate(0, 0); opacity: 1; }
   100% { transform: scale(1) rotate(0deg) translate(0, 0); opacity: 1; }
 }
 
 .animate-shuriken-impact {
-  animation: shuriken-swish 0.4s cubic-bezier(0.17, 0.67, 0.83, 0.67) forwards;
+  animation: shuriken-impact 0.6s cubic-bezier(0.17, 0.88, 0.32, 1.28) forwards;
 }
 
-@keyframes path-flow {
-  0% { stroke-dashoffset: 100; }
+@keyframes chakra-flow {
+  0% { stroke-dashoffset: 60; }
   100% { stroke-dashoffset: 0; }
 }
 
 .animate-path-flow {
-  stroke-dasharray: 20 10;
-  animation: path-flow 2s linear infinite;
+  stroke-dasharray: 10 20;
+  animation: chakra-flow 1.5s linear infinite;
+}
+
+@keyframes aura-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+.animate-aura-pulse {
+  animation: aura-pulse 3s infinite ease-in-out;
 }
 
 @keyframes banner-wave {
