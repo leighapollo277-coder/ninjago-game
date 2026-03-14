@@ -1273,7 +1273,7 @@ export default function App() {
                                 旋風忍者：冒險之旅
                             </div>
                             <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                VER 0.1.8
+                                VER 0.1.9
                             </div>
                         </div>
 
