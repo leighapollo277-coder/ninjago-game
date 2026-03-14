@@ -8,10 +8,7 @@ const CHARACTERS = [
     { id: 'zane', name: '冰忍', url: '/assets/zane.jpg', colorClass: 'text-cyan-600', element: '❄️ 冰雪', skin: 'zane' },
     { id: 'kai', name: '赤地', url: '/assets/kai.jpg', colorClass: 'text-red-600', element: '🔥 火焰', skin: 'kai' },
     { id: 'cole', name: '阿剛', url: '/assets/cole.jpg', colorClass: 'text-stone-800', element: '🪨 大地', skin: 'cole' },
-    { id: 'nya', name: '赤蘭', url: '/assets/nya.jpg', colorClass: 'text-sky-600', element: '💧 水', skin: 'nya' },
-    { id: 'golden', name: '黃金忍者', url: '/assets/golden_ninja.png', colorClass: 'text-yellow-500', element: '✨ 黃金力量', skin: 'golden' },
-    { id: 'oni', name: '鬼忍者', url: '/assets/oni_ninja.png', colorClass: 'text-purple-700', element: '🌑 黑暗力量', skin: 'oni' },
-    { id: 'wu', name: '吳大師', url: '/assets/sensei_wu.png', colorClass: 'text-slate-400', element: '📜 智慧', skin: 'wu' }
+    { id: 'nya', name: '赤蘭', url: '/assets/nya.jpg', colorClass: 'text-sky-600', element: '💧 水', skin: 'nya' }
 ];
 
 const VILLAIN_LEVEL_1 = { id: 'garmadon', name: '劇毒大師', url: '/assets/garmadon.jpg', colorClass: 'text-purple-600' };
@@ -81,30 +78,64 @@ const LEVEL_3_PRESETS = [
     { name: "第55關", words: ["其", "實", "輕", "響", "遲", "已", "叠", "包", "碗", "寫", "冒", "您", "祝賀", "賀信", "賀電", "賀禮", "腦子", "頭腦", "大腦", "右腦", "左腦", "小腦", "發呆", "呆呆地", "呆頭呆腦", "起牀", "小牀", "打鬧", "熱鬧", "鬧鐘", "看鐘", "打鐘", "鐘點", "撥動", "準時", "準備", "準是"] }
 ];
 
-// 生成地圖節點 (冒險地圖) - 使用更自然的蜿蜒路徑
-const MAP_NODES = LEVEL_3_PRESETS.map((preset, idx) => {
-    // 基礎參數
-    const containerWidth = 1000;
-    const spacingY = 250;
-    const paddingY = 200;
-    
-    // 使用正弦函數創造波動路徑
-    // 每 4 個節點完成一個水平循環
-    const cycle = 6; 
-    const horizontalRange = 350; // 水平移動範圍
-    const xBase = containerWidth / 2;
-    
-    // 計算水平偏移
-    const xOffset = Math.sin((idx / cycle) * Math.PI * 2) * horizontalRange;
-    
-    // 加入一點隨機感 (基於索引的偽隨機)
-    const wiggle = (Math.sin(idx * 1.5) * 40);
-    
-    const x = xBase + xOffset + wiggle;
-    const y = paddingY + idx * spacingY;
-    
-    return { ...preset, x, y, id: idx };
-});
+// === 地圖世界定義 (5個章節) ===
+const MAP_WORLDS = [
+    {
+        id: 0, name: '廍女啓程', subtitle: '第 1-11 關', emoji: '🌱', 
+        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-green-950/80 to-slate-950/60',
+        borderColor: 'border-green-500', glowColor: 'shadow-green-500/30',
+        levels: LEVEL_3_PRESETS.slice(0, 11)
+    },
+    {
+        id: 1, name: '隱密訓練', subtitle: '第 12-22 關', emoji: '⛰️',
+        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-blue-950/80 to-slate-950/60',
+        borderColor: 'border-blue-500', glowColor: 'shadow-blue-500/30',
+        levels: LEVEL_3_PRESETS.slice(11, 22)
+    },
+    {
+        id: 2, name: '黑暗崛起', subtitle: '第 23-33 關', emoji: '🔥',
+        bg: '/assets/map_dark_fortress.png', overlayColor: 'from-orange-950/80 to-slate-950/60',
+        borderColor: 'border-orange-500', glowColor: 'shadow-orange-500/30',
+        levels: LEVEL_3_PRESETS.slice(22, 33)
+    },
+    {
+        id: 3, name: '終極考驗', subtitle: '第 34-44 關', emoji: '⚡',
+        bg: '/assets/map_dark_fortress.png', overlayColor: 'from-yellow-950/80 to-slate-950/60',
+        borderColor: 'border-yellow-400', glowColor: 'shadow-yellow-400/30',
+        levels: LEVEL_3_PRESETS.slice(33, 44)
+    },
+    {
+        id: 4, name: '傳説忍者', subtitle: '第 45-55 關', emoji: '✨',
+        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-purple-950/80 to-slate-950/60',
+        borderColor: 'border-purple-400', glowColor: 'shadow-purple-400/30',
+        levels: LEVEL_3_PRESETS.slice(44, 55)
+    }
+];
+
+// === 產生單一章節地香圖節點 (Zigzag進適單個视區內) ===
+const generateChapterNodes = (levels) => {
+    const cols = [200, 500, 800]; // 3欄位置
+    const rowHeight = 130;
+    const startY = 120;
+    return levels.map((level, idx) => {
+        const row = Math.floor(idx / 3);
+        const colIdx = idx % 2 === 0 
+            ? (row % 2 === 0 ? idx % 3 : 2 - (idx % 3))
+            : (row % 2 === 0 ? idx % 3 : 2 - (idx % 3));
+        const x = cols[idx % 3 === 0 ? 0 : idx % 3 === 1 ? 1 : 2];
+        // Zigzag: even rows L->R, odd rows R->L
+        const rowIndex = Math.floor(idx / 3);
+        const posInRow = idx % 3;
+        const colX = rowIndex % 2 === 0 
+            ? cols[posInRow]   // L-to-R
+            : cols[2 - posInRow]; // R-to-L
+        const y = startY + rowIndex * rowHeight;
+        return { ...level, x: colX, y, id: idx };
+    });
+};
+
+// Keep MAP_NODES for backward compat with non-map references
+const MAP_NODES = LEVEL_3_PRESETS.map((preset, idx) => ({ ...preset, id: idx }));
 
 const DEFAULT_MAP_OFFSET = { x: 0, y: 0 };
 
@@ -410,6 +441,10 @@ export default function App() {
     const [heroSkin, setHeroSkin] = useState(() => localStorage.getItem('heroSkin') || 'kai');
     const [isLoading, setIsLoading] = useState(false);
     const [loadingProgress, setLoadingProgress] = useState(0);
+
+    // --- 新增世界/章節系統狀態 ---
+    const [selectedWorld, setSelectedWorld] = useState(null);
+    const [selectedChapterNodes, setSelectedChapterNodes] = useState([]);
 
     // --- 新增設定與子關卡狀態 ---
     const [bgmVolume, setBgmVolume] = useState(() => Number(localStorage.getItem('bgmVolume')) || 40);
@@ -1268,156 +1303,222 @@ export default function App() {
             {/* ===================== 冒險地圖 ===================== */}
             {gameState === 'map' && (
                 <div className="flex flex-col h-full z-50 bg-slate-950 relative text-white overflow-hidden animate-ninja-pop">
-
-                        {/* 頂部導航 */}
-                        <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-900/50 backdrop-blur-md z-30">
-                            <button onClick={goHome} className="absolute bottom-6 left-6 p-4 rounded-full bg-slate-800/80 hover:bg-slate-700 transition border border-white/10 z-50">
-                                <Home className="w-8 h-8" />
-                            </button>
-                            <div className="text-center">
-                                <h1 className="text-3xl font-black text-yellow-400 tracking-tighter italic">ADVENTURE MAP</h1>
-                                <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.3em]">旋風冒險之旅</p>
-                            </div>
-                            <div className="w-16"></div>
-                        </div>
-
-                        {/* 地圖滾動區 */}
-                        <div 
-                            onKeyDown={handleMapKeyDown}
-                            className="flex-1 overflow-auto bg-[url('/assets/map_dark_fortress.png')] bg-center bg-cover relative scroll-smooth scrollbar-hide focus:outline-none"
-                            tabIndex="-1"
-                        >
-                            <div className="absolute inset-0 bg-slate-950/70"></div>
+                    
+                    {/* --- 模式 1: 世界選擇 (World Select) --- */}
+                    {selectedWorld === null ? (
+                        <div className="flex flex-col h-full overflow-y-auto bg-slate-950 relative p-6 md:p-12">
+                            {/* Particles inside world select */}
+                            <Particles />
                             
-                            <div className="relative py-20 mx-auto" style={{ width: '1000px', height: `${MAP_NODES[MAP_NODES.length-1].y + 400}px` }}>
-                                {/* 繪製連線 (SVG) */}
-                                <svg className="absolute inset-0 pointer-events-none z-0" style={{ width: '1000px', height: '100%' }}>
-                                    <defs>
-                                        <linearGradient id="pathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                            <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.6" />
-                                            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.2" />
-                                        </linearGradient>
-                                        <filter id="glow">
-                                            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                                            <feMerge>
-                                                <feMergeNode in="coloredBlur"/>
-                                                <feMergeNode in="SourceGraphic"/>
-                                            </feMerge>
-                                        </filter>
-                                    </defs>
-                                    {MAP_NODES.slice(0, -1).map((node, i) => {
-                                        const nextNode = MAP_NODES[i + 1];
-                                        const isCompleted = completedLevels.subLevels.includes(node.name);
-                                        const isNextCompleted = completedLevels.subLevels.includes(nextNode.name);
-                                        
-                                        // 貝茲曲線點
-                                        const cp1y = node.y + (nextNode.y - node.y) * 0.5;
-                                        const cp2y = node.y + (nextNode.y - node.y) * 0.5;
+                            <div className="relative z-10 max-w-6xl mx-auto w-full space-y-12 pb-12">
+                                <div className="text-center space-y-4">
+                                    <button onClick={goHome} className="absolute top-0 left-0 p-4 rounded-full bg-slate-800/80 hover:bg-slate-700 transition border border-white/10">
+                                        <Home className="w-8 h-8" />
+                                    </button>
+                                    <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-500 to-amber-600 italic tracking-tighter">NINJA WORLDS</h1>
+                                    <p className="text-sm md:text-xl text-slate-400 font-bold uppercase tracking-[0.5em]">選擇你的修煉世界</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-8">
+                                    {MAP_WORLDS.map((world, idx) => {
+                                        // 世界解鎖條件：前一個世界的所有關卡都已完成
+                                        const prevWorld = idx > 0 ? MAP_WORLDS[idx-1] : null;
+                                        const isLocked = prevWorld && prevWorld.levels.some(l => !completedLevels.subLevels.includes(l.name));
                                         
                                         return (
-                                            <g key={`group-${i}`}>
-                                                {/* 底層陰影路徑 */}
-                                                <path
-                                                    d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
-                                                    fill="none"
-                                                    stroke="rgba(0,0,0,0.3)"
-                                                    strokeWidth="16"
-                                                    strokeLinecap="round"
-                                                    className="translate-y-2 translate-x-1"
-                                                />
-                                                {/* 主路徑 */}
-                                                <path
-                                                    d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
-                                                    fill="none"
-                                                    stroke={isCompleted && isNextCompleted ? "#22c55e" : "#334155"}
-                                                    strokeWidth="12"
-                                                    strokeDasharray={isCompleted && isNextCompleted ? "0" : "15,20"}
-                                                    strokeLinecap="round"
-                                                    style={{ 
-                                                        filter: isCompleted && isNextCompleted ? 'url(#glow)' : 'none',
-                                                        transition: 'all 1s ease-in-out'
-                                                    }}
-                                                />
-                                            </g>
-                                        );
-                                    })}
-                                </svg>
-
-                                {/* 繪製點位 */}
-                                {MAP_NODES.map((node, idx) => {
-                                    const isLocked = idx > 0 && !completedLevels.subLevels.includes(MAP_NODES[idx - 1].name);
-                                    const isCompleted = completedLevels.subLevels.includes(node.name);
-                                    const firstUncompletedIdx = MAP_NODES.findIndex(n => !completedLevels.subLevels.includes(n.name));
-                                    const isActive = idx === (firstUncompletedIdx === -1 ? MAP_NODES.length - 1 : firstUncompletedIdx);
-
-                                    return (
-                                        <div 
-                                            key={node.name}
-                                            style={{ left: node.x, top: node.y }}
-                                            className={`absolute -translate-x-1/2 -translate-y-1/2 z-10 transition-transform map-node`}
-                                            data-node-id={idx}
-                                            tabIndex={isLocked ? -1 : 0}
-                                            ref={isActive ? activeNodeRef : null}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' || e.key === ' ') {
-                                                    !isLocked && startSubLevel(node.words, node.name);
-                                                }
-                                            }}
-                                        >
-                                            <div className="focus-ring"></div>
                                             <button
-                                                onClick={() => !isLocked && startSubLevel(node.words, node.name)}
-                                                tabIndex="-1"
-                                                className={`group relative p-6 rounded-full border-4 transition-all duration-300 ${
+                                                key={world.name}
+                                                onClick={() => !isLocked && (setSelectedWorld(world), setSelectedChapterNodes(generateChapterNodes(world.levels)))}
+                                                className={`group relative p-8 rounded-[40px] border-4 transition-all duration-500 overflow-hidden text-left h-64 md:h-80 ${
                                                     isLocked 
-                                                    ? 'bg-slate-900/80 border-slate-800 cursor-not-allowed grayscale' 
-                                                    : isCompleted 
-                                                        ? 'bg-green-500 border-white shadow-[0_0_20px_rgba(34,197,94,0.5)]' 
-                                                        : 'bg-yellow-400 border-white shadow-[0_0_30px_rgba(234,179,8,0.4)] pulse-slow'
+                                                    ? 'bg-slate-900/50 border-slate-800 grayscale cursor-not-allowed opacity-60' 
+                                                    : `bg-slate-900/40 ${world.borderColor} hover:scale-[1.03] active:scale-95 ${world.glowColor} hover:shadow-[0_0_50px_rgba(255,255,255,0.1)]`
                                                 }`}
                                             >
-                                                <span className="text-3xl font-black text-slate-950">
-                                                    {isLocked ? '🔒' : isCompleted ? '✅' : idx + 1}
-                                                </span>
+                                                {/* 背景圖預覽 */}
+                                                <div className="absolute inset-0 opacity-20 filter blur-sm group-hover:blur-none transition-all duration-700">
+                                                    <img src={world.bg} className="w-full h-full object-cover" alt="" />
+                                                    <div className={`absolute inset-0 bg-gradient-to-br ${world.overlayColor}`}></div>
+                                                </div>
+
+                                                <div className="relative z-10 h-full flex flex-col justify-between">
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="text-5xl">{world.emoji}</span>
+                                                        {isLocked ? (
+                                                            <div className="bg-slate-800/80 p-2 rounded-full border border-white/10">
+                                                                <XCircle className="w-6 h-6 text-slate-500" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="bg-green-500/20 px-3 py-1 rounded-full border border-green-500/50 text-green-400 text-xs font-black uppercase">
+                                                                Unlocked
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="space-y-1">
+                                                        <h3 className="text-sm text-slate-400 font-bold uppercase tracking-widest">{world.subtitle}</h3>
+                                                        <h2 className="text-3xl md:text-4xl font-black text-white">{world.name}</h2>
+                                                    </div>
+                                                </div>
                                             </button>
-
-                                            {/* 標籤 */}
-                                            <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 backdrop-blur-md px-6 py-2 rounded-xl border border-white/20 text-xl font-black text-white shadow-2xl">
-                                                {node.name}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-
-                                {/* Independent Player Icon for Animation - pointer-events-none so clicks pass through to map nodes */}
-                                {(() => {
-                                    const firstUncompletedIdx = MAP_NODES.findIndex(node => !completedLevels.subLevels.includes(node.name));
-                                    const targetNode = MAP_NODES[firstUncompletedIdx === -1 ? MAP_NODES.length - 1 : firstUncompletedIdx];
-                                    
-                                    return (
-                                        <div 
-                                            className="absolute transition-all duration-1000 ease-in-out z-20 pointer-events-none"
-                                            style={{ 
-                                                left: targetNode.x, 
-                                                top: targetNode.y,
-                                                transform: 'translate(-50%, -100%)' 
-                                            }}
-                                        >
-                                            <div className="relative animate-bounce">
-                                                <RealLegoImage 
-                                                    char={CHARACTERS.find(c => c.skin === heroSkin) || CHARACTERS[3]} 
-                                                    className="w-24 h-24 rounded-2xl border-4 border-white shadow-2xl bg-slate-800"
-                                                />
-                                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 bg-white rotate-45 transform skew-x-12"></div>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )
-            }
+                    ) : (
+                        /* --- 模式 2: 章節地圖 (Chapter Map) --- */
+                        <div className="flex flex-col h-full bg-slate-950 relative">
+                            {/* 頂部導航 */}
+                            <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-900/50 backdrop-blur-md z-30">
+                                <button 
+                                    onClick={() => setSelectedWorld(null)} 
+                                    className="p-4 rounded-full bg-slate-800/80 hover:bg-slate-700 transition border border-white/10 z-50 flex items-center gap-2 group"
+                                >
+                                    <ChevronLeft className="w-8 h-8 group-hover:-translate-x-1 transition-transform" />
+                                    <span className="hidden md:block font-black pr-2">世界選擇</span>
+                                </button>
+                                <div className="text-center">
+                                    <h1 className="text-3xl font-black text-yellow-400 tracking-tighter italic uppercase">{selectedWorld.name}</h1>
+                                    <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.3em]">{selectedWorld.subtitle}</p>
+                                </div>
+                                <div className="w-16 md:w-32"></div>
+                            </div>
+
+                            {/* 章節內容 (不捲動，適配視窗) */}
+                            <div className="flex-1 relative overflow-hidden bg-center bg-cover" style={{ backgroundImage: `url(${selectedWorld.bg})` }}>
+                                <div className={`absolute inset-0 bg-gradient-to-br ${selectedWorld.overlayColor}`}></div>
+                                
+                                <div className="relative w-[1000px] h-full mx-auto" style={{ height: 'calc(100vh - 120px)' }}>
+                                    {/* 繪製連線 (SVG) */}
+                                    <svg className="absolute inset-0 pointer-events-none z-0" style={{ width: '1000px', height: '100%' }}>
+                                        <defs>
+                                            <linearGradient id="pathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.6" />
+                                                <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.2" />
+                                            </linearGradient>
+                                            <filter id="glow">
+                                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                                <feMerge>
+                                                    <feMergeNode in="coloredBlur"/>
+                                                    <feMergeNode in="SourceGraphic"/>
+                                                </feMerge>
+                                            </filter>
+                                        </defs>
+                                        {selectedChapterNodes.slice(0, -1).map((node, i) => {
+                                            const nextNode = selectedChapterNodes[i + 1];
+                                            const isCompleted = completedLevels.subLevels.includes(node.name);
+                                            const isNextCompleted = completedLevels.subLevels.includes(nextNode.name);
+                                            
+                                            const cp1y = node.y + (nextNode.y - node.y) * 0.5;
+                                            const cp2y = node.y + (nextNode.y - node.y) * 0.5;
+                                            
+                                            return (
+                                                <g key={`group-${i}`}>
+                                                    <path
+                                                        d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
+                                                        fill="none"
+                                                        stroke="rgba(0,0,0,0.5)"
+                                                        strokeWidth="16"
+                                                        strokeLinecap="round"
+                                                        className="translate-y-2 translate-x-1"
+                                                    />
+                                                    <path
+                                                        d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
+                                                        fill="none"
+                                                        stroke={isCompleted && isNextCompleted ? "#22c55e" : "#334155"}
+                                                        strokeWidth="12"
+                                                        strokeDasharray={isCompleted && isNextCompleted ? "0" : "15,20"}
+                                                        strokeLinecap="round"
+                                                        style={{ 
+                                                            filter: isCompleted && isNextCompleted ? 'url(#glow)' : 'none',
+                                                            transition: 'all 1s ease-in-out'
+                                                        }}
+                                                    />
+                                                </g>
+                                            );
+                                        })}
+                                    </svg>
+
+                                    {/* 繪製關卡點位 */}
+                                    {selectedChapterNodes.map((node, idx) => {
+                                        // 關卡解鎖邏輯：全局索引判斷
+                                        const globalIdx = node.id;
+                                        const isLocked = globalIdx > 0 && !completedLevels.subLevels.includes(LEVEL_3_PRESETS[globalIdx - 1].name);
+                                        const isCompleted = completedLevels.subLevels.includes(node.name);
+                                        const firstUncompletedGlobalIdx = LEVEL_3_PRESETS.findIndex(n => !completedLevels.subLevels.includes(n.name));
+                                        const isActive = globalIdx === (firstUncompletedGlobalIdx === -1 ? LEVEL_3_PRESETS.length - 1 : firstUncompletedGlobalIdx);
+
+                                        return (
+                                            <div 
+                                                key={node.name}
+                                                style={{ left: node.x, top: node.y }}
+                                                className={`absolute -translate-x-1/2 -translate-y-1/2 z-10 transition-transform map-node cursor-pointer`}
+                                                ref={isActive ? activeNodeRef : null}
+                                            >
+                                                <button
+                                                    onClick={() => !isLocked && startSubLevel(node.words, node.name)}
+                                                    className={`group relative p-6 rounded-full border-4 transition-all duration-300 ${
+                                                        isLocked 
+                                                        ? 'bg-slate-900/80 border-slate-800 cursor-not-allowed grayscale' 
+                                                        : isCompleted 
+                                                            ? 'bg-green-500 border-white shadow-[0_0_20px_rgba(34,197,94,0.5)] scale-90' 
+                                                            : 'bg-yellow-400 border-white shadow-[0_0_30px_rgba(234,179,8,0.4)] pulse-slow scale-110'
+                                                    }`}
+                                                >
+                                                    <span className="text-3xl font-black text-slate-950">
+                                                        {isLocked ? '🔒' : isCompleted ? '✅' : idx + 1}
+                                                    </span>
+                                                    
+                                                    {/* Label overlay on hover */}
+                                                    {!isLocked && (
+                                                        <div className="absolute top-full mt-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/90 px-4 py-2 rounded-lg border border-white/20 whitespace-nowrap z-50 text-base">
+                                                            {node.name}
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Player Icon on current node */}
+                                    {(() => {
+                                        const firstUncompletedGlobalIdx = LEVEL_3_PRESETS.findIndex(node => !completedLevels.subLevels.includes(node.name));
+                                        const activeGlobalIdx = firstUncompletedGlobalIdx === -1 ? LEVEL_3_PRESETS.length - 1 : firstUncompletedGlobalIdx;
+                                        
+                                        // 檢查當前活動關卡是否在當前顯示的世界中
+                                        const worldStartIdx = selectedWorld.id * 11;
+                                        const worldEndIdx = (selectedWorld.id + 1) * 11;
+                                        
+                                        if (activeGlobalIdx >= worldStartIdx && activeGlobalIdx < worldEndIdx) {
+                                            const nodeInChapter = selectedChapterNodes[activeGlobalIdx - worldStartIdx];
+                                            return (
+                                                <div 
+                                                    className="absolute transition-all duration-1000 ease-in-out z-20 pointer-events-none"
+                                                    style={{ 
+                                                        left: nodeInChapter.x, 
+                                                        top: nodeInChapter.y,
+                                                        transform: 'translate(-50%, -100%)' 
+                                                    }}
+                                                >
+                                                    <div className="relative animate-bounce">
+                                                        <RealLegoImage 
+                                                            char={CHARACTERS.find(c => c.skin === heroSkin) || CHARACTERS[3]} 
+                                                            className="w-24 h-24 rounded-2xl border-4 border-white shadow-2xl bg-slate-800"
+                                                        />
+                                                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 bg-white rotate-45 transform skew-x-12"></div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* ===================== 遊玩畫面 ===================== */}
             {gameState === 'playing' && currentQuestion && (
