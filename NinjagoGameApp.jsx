@@ -334,7 +334,7 @@ const ProgressBar = ({ score, target = 10, heroEnergy = 100, themeIndex = 0, isS
 // === 元件：公仔圖片渲染 (依循獨立圖檔) ===
 const RealLegoImage = ({ char, className = "" }) => {
     return (
-        <div className={`relative overflow-hidden flex items-center justify-center ${className}`}>
+        <div className={`relative overflow-hidden flex items-center justify-center ${className}`} style={{ clipPath: 'circle(48%)', WebkitClipPath: 'circle(48%)' }}>
             <img
                 src={char.url}
                 alt={char.name}
@@ -1393,9 +1393,10 @@ export default function App() {
                                                     <div className="flex justify-center -mt-12">
                                                         <div className={`relative ${isLocked ? 'grayscale opacity-40' : ''}`}>
                                                             <div className={`absolute -inset-6 rounded-full blur-3xl opacity-50 animate-pulse ${isLocked ? 'bg-slate-500' : 'bg-white'}`}></div>
-                                                            <div className="w-44 h-44 relative z-10 transition-transform duration-700 group-hover:rotate-12 group-hover:scale-110 overflow-hidden">
-                                                                <img src={world.medal} className="w-full h-full object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] die-cut-medal hero-sticker-mask" alt={hero.name} />
+                                                            <div className="w-44 h-44 relative z-10 transition-transform duration-700 group-hover:rotate-12 group-hover:scale-110" style={{ clipPath: 'circle(48%)', WebkitClipPath: 'circle(48%)' }}>
+                                                                <img src={world.medal} className="w-full h-full object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] die-cut-medal" alt={hero.name} />
                                                             </div>
+                                                            <div className="absolute inset-0 rounded-full border-4 border-white/20 z-20 pointer-events-none"></div>
                                                             <div className="absolute -bottom-2 -right-2 bg-yellow-400 w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-lg border-2 border-slate-900 group-hover:scale-110 transition-transform z-20">
                                                                 {world.emoji}
                                                             </div>
@@ -1597,15 +1598,16 @@ export default function App() {
                                                         </div>
 
                                                         {/* Hero Sticker with Premium Aura */}
-                                                        <div className="w-36 h-36 relative group rounded-full overflow-hidden">
+                                                        <div className="w-36 h-36 relative group" style={{ clipPath: 'circle(48%)', WebkitClipPath: 'circle(48%)' }}>
                                                             <div className="absolute inset-0 bg-yellow-400/40 blur-3xl rounded-full scale-110 animate-aura-pulse"></div>
                                                             <div className="absolute inset-4 bg-white/30 blur-xl rounded-full animate-pulse transition-all group-hover:scale-150"></div>
                                                             <img 
                                                                 src={CHARACTERS.find(c => c.skin === heroSkin)?.url} 
                                                                 alt="hero" 
-                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)] hover:scale-110 transition-transform duration-500 die-cut-medal hero-sticker-mask" 
+                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)] hover:scale-110 transition-transform duration-500 die-cut-medal" 
                                                             />
                                                         </div>
+                                                        <div className="absolute inset-0 rounded-full border-4 border-yellow-400/50 z-20 pointer-events-none scale-90"></div>
                                                         
                                                         {/* Location Badge */}
                                                         <div className="bg-yellow-400 text-slate-900 px-5 py-2 rounded-full font-black text-xs shadow-[0_10px_20px_rgba(0,0,0,0.4)] border-2 border-slate-900 whitespace-nowrap -mt-6 z-20 animate-bounce uppercase tracking-tighter">
