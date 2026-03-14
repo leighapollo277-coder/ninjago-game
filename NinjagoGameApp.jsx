@@ -81,7 +81,7 @@ const LEVEL_3_PRESETS = [
 // === 地圖世界定義 (5個章節) ===
 const MAP_WORLDS = [
     {
-        id: 0, name: '廍女啓程', subtitle: '第 1-11 關', emoji: '🌱', 
+        id: 0, name: '忍者啟程', subtitle: '第 1-11 關', emoji: '🌱', 
         bg: '/assets/map_mountain_temple.png', overlayColor: 'from-green-950/80 to-slate-950/60',
         borderColor: 'border-green-500', glowColor: 'shadow-green-500/30',
         levels: LEVEL_3_PRESETS.slice(0, 11)
@@ -802,8 +802,10 @@ export default function App() {
             isTarget: word === targetWord
         }));
 
-        setCurrentQuestion({ target: targetWord, options: newOptions });
+        const newQuestion = { target: targetWord, options: newOptions };
+        setCurrentQuestion(newQuestion);
         speak(`${targetWord}`);
+        return newQuestion;
     }, [speak, currentWordPool, wordStats]);
 
     const startAdventure = () => {
@@ -899,6 +901,7 @@ export default function App() {
 
         await Promise.all([...imgPromises, ...audioPromises, wordSettle()]);
         
+        
         setLoadingProgress(100);
         await new Promise(r => setTimeout(r, 800)); // Show 100% briefly
         
@@ -915,9 +918,14 @@ export default function App() {
         setIsLoading(false);
 
         // --- Original Logic (Cleaned up) ---
-        const firstQuestion = generateQuestion(words);
-        if (firstQuestion) speak(`進入，${subName}！。請回答：${firstQuestion.target}`);
-        else speak(`進入，${subName}！`);
+        setTimeout(() => {
+            const firstQuestion = generateQuestion(words);
+            if (firstQuestion) {
+                speak(`進入，${subName}！。請回答：${firstQuestion.target}`);
+            } else {
+                speak(`進入，${subName}！`);
+            }
+        }, 100);
     };
 
 
@@ -1398,9 +1406,16 @@ export default function App() {
                                                 <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.2" />
                                             </linearGradient>
                                             <filter id="glow">
-                                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
                                                 <feMerge>
                                                     <feMergeNode in="coloredBlur"/>
+                                                    <feMergeNode in="SourceGraphic"/>
+                                                </feMerge>
+                                            </filter>
+                                            <filter id="nodeGlow">
+                                                <feGaussianBlur stdDeviation="8" result="blur"/>
+                                                <feMerge>
+                                                    <feMergeNode in="blur"/>
                                                     <feMergeNode in="SourceGraphic"/>
                                                 </feMerge>
                                             </filter>
@@ -1426,12 +1441,13 @@ export default function App() {
                                                     <path
                                                         d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
                                                         fill="none"
-                                                        stroke={isCompleted && isNextCompleted ? "#22c55e" : "#334155"}
-                                                        strokeWidth="12"
-                                                        strokeDasharray={isCompleted && isNextCompleted ? "0" : "15,20"}
+                                                        stroke={isCompleted && isNextCompleted ? "#4ade80" : "#ffffff"}
+                                                        strokeWidth="8"
+                                                        strokeDasharray={isCompleted && isNextCompleted ? "0" : "10,15"}
                                                         strokeLinecap="round"
                                                         style={{ 
                                                             filter: isCompleted && isNextCompleted ? 'url(#glow)' : 'none',
+                                                            opacity: isCompleted && isNextCompleted ? 1 : 0.2,
                                                             transition: 'all 1s ease-in-out'
                                                         }}
                                                     />
@@ -1458,14 +1474,20 @@ export default function App() {
                                             >
                                                 <button
                                                     onClick={() => !isLocked && startSubLevel(node.words, node.name)}
-                                                    className={`group relative p-6 rounded-full border-4 transition-all duration-300 ${
+                                                    className={`group relative p-6 md:p-8 rounded-3xl border-4 transition-all duration-300 ${
                                                         isLocked 
-                                                        ? 'bg-slate-900/80 border-slate-800 cursor-not-allowed grayscale' 
+                                                        ? 'bg-slate-900/90 border-slate-800 cursor-not-allowed grayscale' 
                                                         : isCompleted 
-                                                            ? 'bg-green-500 border-white shadow-[0_0_20px_rgba(34,197,94,0.5)] scale-90' 
-                                                            : 'bg-yellow-400 border-white shadow-[0_0_30px_rgba(234,179,8,0.4)] pulse-slow scale-110'
+                                                            ? 'bg-green-500 border-white shadow-[0_10px_20px_rgba(34,197,94,0.3)] scale-90 hover:scale-100' 
+                                                            : 'bg-gradient-to-br from-yellow-400 to-amber-500 border-white shadow-[0_15px_30px_rgba(234,179,8,0.4)] scale-110 hover:scale-125 hover:-translate-y-2'
                                                     }`}
+                                                    style={{ 
+                                                        filter: isActive ? 'url(#nodeGlow)' : 'none'
+                                                    }}
                                                 >
+                                                    {isActive && !isCompleted && (
+                                                        <div className="absolute -inset-4 bg-yellow-400/30 rounded-[40px] animate-pulse blur-xl"></div>
+                                                    )}
                                                     <span className="text-3xl font-black text-slate-950">
                                                         {isLocked ? '🔒' : isCompleted ? '✅' : idx + 1}
                                                     </span>
