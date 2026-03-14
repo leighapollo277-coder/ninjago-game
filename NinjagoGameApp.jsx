@@ -1237,7 +1237,7 @@ export default function App() {
             {/* ===================== 開始畫面 ===================== */}
             {gameState === 'start' && (
                 <div 
-                    className="flex flex-col items-center justify-center h-full z-10 space-y-12 relative px-4 text-center"
+                    className="flex flex-col items-center justify-center flex-1 z-10 space-y-12 relative px-4 text-center"
                     onClick={() => {
                         if (!audioAllowed) {
                             setAudioAllowed(true);
@@ -1318,11 +1318,11 @@ export default function App() {
 
             {/* ===================== 冒險地圖 ===================== */}
             {gameState === 'map' && (
-                <div className="flex flex-col h-full z-50 bg-slate-950 relative text-white overflow-hidden animate-ninja-pop">
+                <div className="flex flex-col flex-1 z-50 bg-slate-950 relative text-white overflow-hidden animate-ninja-pop">
                     
                     {/* --- 模式 1: 世界選擇 (World Select) --- */}
                     {selectedWorld === null ? (
-                        <div className="flex flex-col h-full overflow-y-auto bg-slate-950 relative p-6 md:p-12 lg:p-20">
+                        <div className="flex flex-col flex-1 overflow-y-auto bg-slate-950 relative p-6 md:p-12 lg:p-20">
                             {/* Particles inside world select */}
                             <Particles />
                             
