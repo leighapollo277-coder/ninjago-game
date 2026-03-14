@@ -807,6 +807,11 @@ export default function App() {
             }
         }
 
+        // 播放音樂 (Battle Theme Starts Now!)
+        audioContext.bgm1.pause();
+        audioContext.bgm2.currentTime = 0;
+        audioContext.bgm2.play().catch(e => console.log(e));
+
         // --- Added Asset Preloading ---
         setIsLoading(true);
         setLoadingProgress(0);
@@ -843,10 +848,10 @@ export default function App() {
             });
         });
 
-        // 3. Simulated progress for words
+        // 3. Simulated progress for words (Ninja training)
         const wordSettle = async () => {
             for (let i = 0; i < words.length; i++) {
-                await new Promise(r => setTimeout(r, 30));
+                await new Promise(r => setTimeout(r, 70)); // Slowed down for cinematic effect
                 tick();
             }
         };
@@ -854,8 +859,11 @@ export default function App() {
         await Promise.all([...imgPromises, ...audioPromises, wordSettle()]);
         
         setLoadingProgress(100);
-        await new Promise(r => setTimeout(r, 600)); // Show 100% briefly
+        await new Promise(r => setTimeout(r, 800)); // Show 100% briefly
         setIsLoading(false);
+
+        // --- Cinematic Delay before Quiz Starts ---
+        await new Promise(r => setTimeout(r, 1000));
 
         // --- Original Logic ---
         setCurrentWordPool(words);
@@ -869,12 +877,8 @@ export default function App() {
         setHeroEnergy(100);
         setGameState('playing');
 
-        // 播放音樂
-        audioContext.bgm1.pause();
-        audioContext.bgm2.currentTime = 0;
-        audioContext.bgm2.play().catch(e => console.log(e));
-
         generateQuestion(words);
+        speak(`進入，${subName}！`);
     };
 
 
@@ -1241,7 +1245,7 @@ export default function App() {
                                 旋風忍者：冒險之旅
                             </div>
                             <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                VER 0.1.4
+                                VER 0.1.5
                             </div>
                         </div>
 
