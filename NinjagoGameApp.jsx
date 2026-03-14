@@ -6,17 +6,17 @@ import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Tra
 
 // === 資料與常數準備 ===
 const CHARACTERS = [
-    { id: 'lloyd', name: '勞埃德', url: '/assets/lloyd.jpg', colorClass: 'text-green-600', element: '❇️ 能量', skin: 'lloyd' },
-    { id: 'jay', name: '阿光', url: '/assets/jay.jpg', colorClass: 'text-blue-600', element: '⚡ 閃電', skin: 'jay' },
-    { id: 'zane', name: '冰忍', url: '/assets/zane.jpg', colorClass: 'text-cyan-600', element: '❄️ 冰雪', skin: 'zane' },
-    { id: 'kai', name: '赤地', url: '/assets/kai.jpg', colorClass: 'text-red-600', element: '🔥 火焰', skin: 'kai' },
-    { id: 'cole', name: '阿剛', url: '/assets/cole.jpg', colorClass: 'text-stone-800', element: '🪨 大地', skin: 'cole' },
-    { id: 'nya', name: '赤蘭', url: '/assets/nya.jpg', colorClass: 'text-sky-600', element: '💧 水', skin: 'nya' }
+    { id: 'lloyd', name: '勞埃德', url: '/assets/lloyd.png', colorClass: 'text-green-600', element: '❇️ 能量', skin: 'lloyd' },
+    { id: 'jay', name: '阿光', url: '/assets/jay.png', colorClass: 'text-blue-600', element: '⚡ 閃電', skin: 'jay' },
+    { id: 'zane', name: '冰忍', url: '/assets/zane.png', colorClass: 'text-cyan-600', element: '❄️ 冰雪', skin: 'zane' },
+    { id: 'kai', name: '赤地', url: '/assets/kai.png', colorClass: 'text-red-600', element: '🔥 火焰', skin: 'kai' },
+    { id: 'cole', name: '阿剛', url: '/assets/cole.png', colorClass: 'text-stone-800', element: '🪨 大地', skin: 'cole' },
+    { id: 'nya', name: '赤蘭', url: '/assets/nya.png', colorClass: 'text-sky-600', element: '💧 水', skin: 'nya' }
 ];
 
-const VILLAIN_LEVEL_1 = { id: 'garmadon', name: '劇毒大師', url: '/assets/garmadon.jpg', colorClass: 'text-purple-600' };
-const VILLAIN_LEVEL_2 = { id: 'overlord', name: '黑暗魔主', url: '/assets/overlord.jpg', colorClass: 'text-purple-900', isStrong: true };
-const VILLAIN_LEVEL_3 = { id: 'pythor', name: '派索長老', url: '/assets/pythor.jpg', colorClass: 'text-white', isStrong: true };
+const VILLAIN_LEVEL_1 = { id: 'garmadon', name: '劇毒大師', url: '/assets/garmadon.png', colorClass: 'text-purple-600' };
+const VILLAIN_LEVEL_2 = { id: 'overlord', name: '黑暗魔主', url: '/assets/overlord.png', colorClass: 'text-purple-900', isStrong: true };
+const VILLAIN_LEVEL_3 = { id: 'pythor', name: '派索長老', url: '/assets/pythor.png', colorClass: 'text-white', isStrong: true };
 
 const WORDS_LEVEL_1_2 = [
     '大人', '小人', '大哭', '大笑', '大口', '小口', '爸爸', '媽媽', '上天', '天上', '太大', '太小', '一天', '一月', '二天', '二月', '上上', '下下', '天地', '大地', '太陽', '月亮', '星星', '天亮', '大火', '大水', '火星', '水星', '三天', '三月', '下地', '地上', '地下', '土地', '大山', '小山', '土山', '石山', '火山', '土星', '木星', '好人', '田地', '水田', '我有', '我爸', '我媽', '我哭', '我笑', '好山', '好水'
