@@ -1629,7 +1629,7 @@ export default function App() {
                                                         <div className="w-32 h-32 relative">
                                                             <div className="absolute inset-0 bg-yellow-400/30 blur-3xl rounded-full scale-125 pulse-slow"></div>
                                                             <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-75 animate-pulse"></div>
-                                                            <img src={CHARACTERS.find(c => c.id === currentHero)?.url} alt="hero" className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
+                                                            <img src={CHARACTERS.find(c => c.skin === heroSkin)?.url} alt="hero" className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
                                                         </div>
                                                         <div className="bg-yellow-400 text-slate-900 px-4 py-1.5 rounded-full font-black text-sm shadow-xl border-2 border-slate-900 whitespace-nowrap mt-2 animate-bounce uppercase tracking-widest leading-none">
                                                             當前位置
