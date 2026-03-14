@@ -1393,8 +1393,8 @@ export default function App() {
                                                     <div className="flex justify-center -mt-12">
                                                         <div className={`relative ${isLocked ? 'grayscale opacity-40' : ''}`}>
                                                             <div className={`absolute -inset-6 rounded-full blur-3xl opacity-50 animate-pulse ${isLocked ? 'bg-slate-500' : 'bg-white'}`}></div>
-                                                            <div className="w-44 h-44 relative z-10 transition-transform duration-700 group-hover:rotate-12 group-hover:scale-110">
-                                                                <img src={world.medal} className="w-full h-full object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] die-cut-medal" alt={hero.name} />
+                                                            <div className="w-44 h-44 relative z-10 transition-transform duration-700 group-hover:rotate-12 group-hover:scale-110 overflow-hidden">
+                                                                <img src={world.medal} className="w-full h-full object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] die-cut-medal hero-sticker-mask" alt={hero.name} />
                                                             </div>
                                                             <div className="absolute -bottom-2 -right-2 bg-yellow-400 w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-lg border-2 border-slate-900 group-hover:scale-110 transition-transform z-20">
                                                                 {world.emoji}
@@ -1597,13 +1597,13 @@ export default function App() {
                                                         </div>
 
                                                         {/* Hero Sticker with Premium Aura */}
-                                                        <div className="w-36 h-36 relative group">
+                                                        <div className="w-36 h-36 relative group rounded-full overflow-hidden">
                                                             <div className="absolute inset-0 bg-yellow-400/40 blur-3xl rounded-full scale-110 animate-aura-pulse"></div>
                                                             <div className="absolute inset-4 bg-white/30 blur-xl rounded-full animate-pulse transition-all group-hover:scale-150"></div>
                                                             <img 
                                                                 src={CHARACTERS.find(c => c.skin === heroSkin)?.url} 
                                                                 alt="hero" 
-                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)] hover:scale-110 transition-transform duration-500 die-cut-medal" 
+                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)] hover:scale-110 transition-transform duration-500 die-cut-medal hero-sticker-mask" 
                                                             />
                                                         </div>
                                                         
