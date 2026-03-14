@@ -6,7 +6,7 @@ import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Tra
 
 // === 資料與常數準備 ===
 const CHARACTERS = [
-    { id: 'lloyd', name: '勞埃德', url: '/assets/lloyd.png', colorClass: 'text-green-600', element: '❇️ 能量', skin: 'lloyd' },
+    { id: 'lloyd', name: '勞埃德', url: '/assets/medal_lloyd.png', colorClass: 'text-green-600', element: '❇️ 能量', skin: 'lloyd' },
     { id: 'jay', name: '阿光', url: '/assets/medal_jay.png', colorClass: 'text-blue-600', element: '⚡ 閃電', skin: 'jay' },
     { id: 'zane', name: '冰忍', url: '/assets/zane.png', colorClass: 'text-cyan-600', element: '❄️ 冰雪', skin: 'zane' },
     { id: 'kai', name: '赤地', url: '/assets/medal_kai.png', colorClass: 'text-red-600', element: '🔥 火焰', skin: 'kai' },
