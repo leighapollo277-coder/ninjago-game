@@ -1512,25 +1512,38 @@ export default function App() {
                                             
                                             return (
                                                 <g key={`group-${i}`}>
+                                                    {/* Shadow layer for path */}
                                                     <path
                                                         d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
                                                         fill="none"
-                                                        stroke="rgba(0,0,0,0.5)"
-                                                        strokeWidth="16"
+                                                        stroke="rgba(0,0,0,0.4)"
+                                                        strokeWidth="12"
                                                         strokeLinecap="round"
                                                         className="translate-y-2 translate-x-1"
                                                     />
+                                                    {/* Glow layer for completed path */}
+                                                    {isCompleted && isNextCompleted && (
+                                                        <path
+                                                            d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
+                                                            fill="none"
+                                                            stroke={selectedWorld.id === 2 ? "#ef4444" : "#4ade80"}
+                                                            strokeWidth="10"
+                                                            strokeLinecap="round"
+                                                            style={{ filter: 'blur(8px)', opacity: 0.6 }}
+                                                        />
+                                                    )}
+                                                    {/* Main path layer */}
                                                     <path
                                                         d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
                                                         fill="none"
-                                                        stroke={isCompleted && isNextCompleted ? "#4ade80" : "#ffffff"}
-                                                        strokeWidth="8"
-                                                        strokeDasharray={isCompleted && isNextCompleted ? "0" : "10,15"}
+                                                        stroke={isCompleted && isNextCompleted ? (selectedWorld.id === 2 ? "#ef4444" : "#4ade80") : "rgba(255,255,255,0.2)"}
+                                                        strokeWidth="6"
+                                                        strokeDasharray={isCompleted && isNextCompleted ? "0" : "12,18"}
                                                         strokeLinecap="round"
+                                                        className={isCompleted && isNextCompleted ? "animate-path-flow" : ""}
                                                         style={{ 
                                                             filter: isCompleted && isNextCompleted ? 'url(#glow)' : 'none',
-                                                            opacity: isCompleted && isNextCompleted ? 1 : 0.2,
-                                                            transition: 'all 1s ease-in-out'
+                                                            transition: 'stroke 1s ease-in-out'
                                                         }}
                                                     />
                                                 </g>

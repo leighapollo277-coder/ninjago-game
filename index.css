@@ -34,3 +34,40 @@
 .pulse-slow {
   animation: pulse-slow 3s infinite ease-in-out;
 }
+
+@keyframes float-platform {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float-node {
+  animation: float-platform var(--float-duration, 3s) infinite ease-in-out;
+}
+
+@keyframes shuriken-swish {
+  0% { transform: scale(3) rotate(720deg) translate(-100px, -100px); opacity: 0; }
+  100% { transform: scale(1) rotate(0deg) translate(0, 0); opacity: 1; }
+}
+
+.animate-shuriken-impact {
+  animation: shuriken-swish 0.4s cubic-bezier(0.17, 0.67, 0.83, 0.67) forwards;
+}
+
+@keyframes path-flow {
+  0% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.animate-path-flow {
+  stroke-dasharray: 20 10;
+  animation: path-flow 2s linear infinite;
+}
+
+@keyframes banner-wave {
+  0%, 100% { transform: rotate(-2deg) skewX(2deg); }
+  50% { transform: rotate(3deg) skewX(-2deg); }
+}
+
+.animate-banner-wave {
+  animation: banner-wave 2s infinite ease-in-out;
+}
