@@ -302,6 +302,63 @@ const RealLegoImage = ({ char, className = "" }) => {
     );
 };
 
+// === 元件：載入畫面 ===
+const LoadingScreen = ({ progress, heroSkin }) => {
+    const hero = CHARACTERS.find(c => c.skin === heroSkin) || CHARACTERS[3];
+    
+    return (
+        <div className="fixed inset-0 z-[200] bg-slate-900 flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+            <div className="max-w-md w-full space-y-12 relative">
+                {/* 旋轉光球背景 */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-yellow-500/20 rounded-full blur-[100px] animate-pulse"></div>
+
+                <div className="space-y-4">
+                    <h2 className="text-xl text-yellow-300 font-bold tracking-[0.2em] uppercase">修煉準備中</h2>
+                    <h1 className="text-5xl font-black text-white italic">LOADING<span className="text-yellow-400">...</span></h1>
+                </div>
+
+                {/* 英雄跑步區 */}
+                <div className="relative w-full h-32 flex items-end">
+                    <div 
+                        className="absolute bottom-0 transition-all duration-300 ease-out"
+                        style={{ left: `calc(${progress}% - 40px)` }}
+                    >
+                        <div className="relative">
+                            <img 
+                                src={hero.url} 
+                                alt="Running Hero" 
+                                className="w-24 h-24 object-contain animate-bounce"
+                                style={{ animationDuration: '0.4s' }}
+                            />
+                            {/* 跑步煙霧效果 */}
+                            <div className="absolute -left-4 bottom-0 flex gap-1">
+                                <div className="w-2 h-2 bg-white/20 rounded-full animate-ping"></div>
+                                <div className="w-3 h-3 bg-white/10 rounded-full animate-ping" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 載入條 */}
+                <div className="space-y-4">
+                    <div className="w-full bg-slate-800 rounded-full h-6 p-1 border-2 border-slate-700 relative overflow-hidden">
+                        <div 
+                            className="h-full bg-gradient-to-r from-yellow-500 to-amber-400 rounded-full transition-all duration-300 ease-out relative"
+                            style={{ width: `${progress}%` }}
+                        >
+                            <div className="absolute inset-0 bg-white/20 shimmer-anim"></div>
+                        </div>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-400 font-bold tracking-widest px-2">
+                        <span>{progress}%</span>
+                        <span className="animate-pulse">正在同步忍術資料...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // === 元件：黃色粒子背景動畫 ===
 const Particles = () => {
     return (
@@ -345,6 +402,8 @@ export default function App() {
     });
     const [newlyUnlocked, setNewlyUnlocked] = useState(null); // tracking for unlock animation
     const [heroSkin, setHeroSkin] = useState(() => localStorage.getItem('heroSkin') || 'kai');
+    const [isLoading, setIsLoading] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState(0);
 
     // --- 新增設定與子關卡狀態 ---
     const [bgmVolume, setBgmVolume] = useState(() => Number(localStorage.getItem('bgmVolume')) || 40);
@@ -722,7 +781,7 @@ export default function App() {
     };
 
     // 選擇特定子關卡並開始
-    const startSubLevel = (words, subName) => {
+    const startSubLevel = async (words, subName) => {
         // Determine the actual level based on subName
         let currentLevel = 3; // All map nodes are considered Level 3
         if (subName === 'all' || subName === 'custom') {
@@ -748,6 +807,57 @@ export default function App() {
             }
         }
 
+        // --- Added Asset Preloading ---
+        setIsLoading(true);
+        setLoadingProgress(0);
+
+        const totalToLoad = words.length + CHARACTERS.length + 5;
+        let loaded = 0;
+        const tick = () => {
+            loaded++;
+            setLoadingProgress(Math.min(99, Math.floor((loaded / totalToLoad) * 100)));
+        };
+
+        // 1. Preload Images
+        const imagePaths = ['/assets/home_bg.png', ...CHARACTERS.map(c => c.url)];
+        const imgPromises = imagePaths.map(path => {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.src = path;
+                img.onload = () => { tick(); resolve(); };
+                img.onerror = () => { tick(); resolve(); };
+            });
+        });
+
+        // 2. Preload Audio
+        const audioPromises = [
+            audioContext.bgm1, audioContext.bgm2, audioContext.correct, audioContext.wrong
+        ].map(audio => {
+            return new Promise(resolve => {
+                if (audio.readyState >= 3) { tick(); resolve(); }
+                else {
+                    audio.addEventListener('canplaythrough', () => { tick(); resolve(); }, { once: true });
+                    audio.load();
+                    setTimeout(() => { tick(); resolve(); }, 2000); // 2s timeout
+                }
+            });
+        });
+
+        // 3. Simulated progress for words
+        const wordSettle = async () => {
+            for (let i = 0; i < words.length; i++) {
+                await new Promise(r => setTimeout(r, 30));
+                tick();
+            }
+        };
+
+        await Promise.all([...imgPromises, ...audioPromises, wordSettle()]);
+        
+        setLoadingProgress(100);
+        await new Promise(r => setTimeout(r, 600)); // Show 100% briefly
+        setIsLoading(false);
+
+        // --- Original Logic ---
         setCurrentWordPool(words);
         setSelectedSubLevel(subName);
         
@@ -881,6 +991,9 @@ export default function App() {
                     </div>
                 </div>
             )}
+
+            {/* Loading Screen Overlay */}
+            {isLoading && <LoadingScreen progress={loadingProgress} heroSkin={heroSkin} />}
 
             {/* 內聯全局動畫樣式設計 */}
             <style>{`
@@ -1128,7 +1241,7 @@ export default function App() {
                                 旋風忍者：冒險之旅
                             </div>
                             <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                VER 0.1.3
+                                VER 0.1.4
                             </div>
                         </div>
 
