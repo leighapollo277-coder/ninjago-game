@@ -82,31 +82,36 @@ const LEVEL_3_PRESETS = [
 const MAP_WORLDS = [
     {
         id: 0, name: '忍者啟程', subtitle: '第 1-11 關', emoji: '🌱', 
-        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-green-950/80 to-slate-950/60',
+        description: '在山中神廟接受基礎訓練，掌握忍者的基本本領。', heroId: 'lloyd',
+        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-green-600/30 to-slate-950/90',
         borderColor: 'border-green-500', glowColor: 'shadow-green-500/30',
         levels: LEVEL_3_PRESETS.slice(0, 11)
     },
     {
         id: 1, name: '隱密訓練', subtitle: '第 12-22 關', emoji: '⛰️',
-        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-blue-950/80 to-slate-950/60',
+        description: '進入高峻的山脈，學會在極端環境下隱藏行蹤與作戰。', heroId: 'jay',
+        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-blue-600/30 to-slate-950/90',
         borderColor: 'border-blue-500', glowColor: 'shadow-blue-500/30',
         levels: LEVEL_3_PRESETS.slice(11, 22)
     },
     {
         id: 2, name: '黑暗崛起', subtitle: '第 23-33 關', emoji: '🔥',
-        bg: '/assets/map_dark_fortress.png', overlayColor: 'from-orange-950/80 to-slate-950/60',
-        borderColor: 'border-orange-500', glowColor: 'shadow-orange-500/30',
+        description: '黑暗要塞的勢力正在擴張，忍者必須深入虎穴迎接挑戰。', heroId: 'kai',
+        bg: '/assets/map_dark_fortress.png', overlayColor: 'from-red-600/30 to-slate-950/90',
+        borderColor: 'border-red-500', glowColor: 'shadow-red-500/30',
         levels: LEVEL_3_PRESETS.slice(22, 33)
     },
     {
         id: 3, name: '終極考驗', subtitle: '第 34-44 關', emoji: '⚡',
-        bg: '/assets/map_dark_fortress.png', overlayColor: 'from-yellow-950/80 to-slate-950/60',
-        borderColor: 'border-yellow-400', glowColor: 'shadow-yellow-400/30',
+        description: '面對黑暗魔術的最強考驗，只有意志堅定者才能勝出。', heroId: 'cole',
+        bg: '/assets/map_dark_fortress.png', overlayColor: 'from-orange-600/30 to-slate-950/90',
+        borderColor: 'border-orange-500', glowColor: 'shadow-orange-500/30',
         levels: LEVEL_3_PRESETS.slice(33, 44)
     },
     {
         id: 4, name: '傳説忍者', subtitle: '第 45-55 關', emoji: '✨',
-        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-purple-950/80 to-slate-950/60',
+        description: '覺醒終極潛能，成為守護世界的傳說忍者。', heroId: 'nya',
+        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-purple-600/30 to-slate-950/90',
         borderColor: 'border-purple-400', glowColor: 'shadow-purple-400/30',
         levels: LEVEL_3_PRESETS.slice(44, 55)
     }
