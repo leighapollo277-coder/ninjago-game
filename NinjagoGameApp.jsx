@@ -487,37 +487,37 @@ export default function App() {
 
     const activeNodeRef = useRef(null);
 
-    // 當進入地圖時，自動滾動到當前進度位置並聚焦
+    // 當進入地圖或章節節點更新時，自動滾動到當前進度位置並聚焦
     useEffect(() => {
-        if (gameState === 'map') {
-            const currentIdx = MAP_NODES.findIndex(node => !completedLevels.subLevels.includes(node.name));
-            const targetNode = MAP_NODES[currentIdx === -1 ? MAP_NODES.length - 1 : currentIdx];
-            
-            if (targetNode) {
-                const scrollAndFocus = () => {
-                    if (activeNodeRef.current) {
-                        activeNodeRef.current.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center',
-                            inline: 'center'
-                        });
-                        // 延遲聚焦以避免與滾動行為衝突
-                        setTimeout(() => {
-                            activeNodeRef.current?.focus();
-                        }, 500);
-                        return true;
-                    }
-                    return false;
-                };
-
-                // 嘗試多幾次，確保佈局完成
-                if (!scrollAndFocus()) {
-                    const timer = setTimeout(scrollAndFocus, 100);
-                    return () => clearTimeout(timer);
+        if (gameState === 'map' && selectedChapterNodes.length > 0) {
+            const scrollAndFocus = () => {
+                if (activeNodeRef.current) {
+                    activeNodeRef.current.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center'
+                    });
+                    // 延遲聚焦以避免與滾動行為衝突
+                    setTimeout(() => {
+                        activeNodeRef.current?.focus();
+                    }, 300);
+                    return true;
                 }
-            }
+                return false;
+            };
+
+            // 嘗試多次滾動，因為地圖容器或節點可能有延遲渲染或動畫
+            let attempts = 0;
+            const scrollInterval = setInterval(() => {
+                if (scrollAndFocus() || attempts > 20) {
+                    clearInterval(scrollInterval);
+                }
+                attempts++;
+            }, 150);
+
+            return () => clearInterval(scrollInterval);
         }
-    }, [gameState, completedLevels.subLevels]);
+    }, [gameState, selectedChapterNodes, completedLevels.subLevels]);
 
     // 處理地圖鍵盤導覽
     const handleMapKeyDown = (e) => {
