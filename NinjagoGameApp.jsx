@@ -382,8 +382,8 @@ export default function App() {
     // 當進入地圖時，自動滾動到當前進度位置並聚焦
     useEffect(() => {
         if (gameState === 'map') {
-            const currentIdx = completedLevels.subLevels.length;
-            const targetNode = MAP_NODES[Math.min(currentIdx, MAP_NODES.length - 1)];
+            const currentIdx = MAP_NODES.findIndex(node => !completedLevels.subLevels.includes(node.name));
+            const targetNode = MAP_NODES[currentIdx === -1 ? MAP_NODES.length - 1 : currentIdx];
             
             if (targetNode) {
                 const scrollAndFocus = () => {
@@ -409,13 +409,12 @@ export default function App() {
                 }
             }
         }
-    }, [gameState, completedLevels.subLevels.length]);
+    }, [gameState, completedLevels.subLevels]);
 
     // 處理地圖鍵盤導覽
     const handleMapKeyDown = (e) => {
         if (gameState !== 'map') return;
         
-        const currentIdx = completedLevels.subLevels.length;
         const focusedElement = document.activeElement;
         const focusedId = focusedElement?.getAttribute('data-node-id');
         
@@ -1233,7 +1232,8 @@ export default function App() {
                                 {MAP_NODES.map((node, idx) => {
                                     const isLocked = idx > 0 && !completedLevels.subLevels.includes(MAP_NODES[idx - 1].name);
                                     const isCompleted = completedLevels.subLevels.includes(node.name);
-                                    const isActive = idx === Math.min(completedLevels.subLevels.length, MAP_NODES.length - 1);
+                                    const firstUncompletedIdx = MAP_NODES.findIndex(n => !completedLevels.subLevels.includes(n.name));
+                                    const isActive = idx === (firstUncompletedIdx === -1 ? MAP_NODES.length - 1 : firstUncompletedIdx);
 
                                     return (
                                         <div 
@@ -1266,10 +1266,9 @@ export default function App() {
                                                 </span>
                                             </button>
 
-                                                {/* 標籤 */}
-                                                <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 backdrop-blur-md px-6 py-2 rounded-xl border border-white/20 text-xl font-black text-white shadow-2xl">
-                                                    {node.name}
-                                                </div>
+                                            {/* 標籤 */}
+                                            <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 backdrop-blur-md px-6 py-2 rounded-xl border border-white/20 text-xl font-black text-white shadow-2xl">
+                                                {node.name}
                                             </div>
                                         </div>
                                     );
@@ -1277,9 +1276,8 @@ export default function App() {
 
                                 {/* Independent Player Icon for Animation */}
                                 {(() => {
-                                    const subLevels = completedLevels.subLevels;
-                                    const currentIdx = subLevels.length; // Next uncompleted lesson is the target
-                                    const targetNode = MAP_NODES[Math.min(currentIdx, MAP_NODES.length - 1)];
+                                    const firstUncompletedIdx = MAP_NODES.findIndex(node => !completedLevels.subLevels.includes(node.name));
+                                    const targetNode = MAP_NODES[firstUncompletedIdx === -1 ? MAP_NODES.length - 1 : firstUncompletedIdx];
                                     
                                     return (
                                         <div 
