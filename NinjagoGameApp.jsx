@@ -1526,9 +1526,9 @@ export default function App() {
                                                     <div className="relative animate-bounce">
                                                         <RealLegoImage 
                                                             char={CHARACTERS.find(c => c.skin === heroSkin) || CHARACTERS[3]} 
-                                                            className="w-24 h-24 rounded-2xl border-4 border-white shadow-2xl bg-slate-800"
+                                                            className="w-24 h-24 rounded-2xl border-4 border-white shadow-[0_0_40px_rgba(255,255,255,0.5)] bg-slate-800"
                                                         />
-                                                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 bg-white rotate-45 transform skew-x-12"></div>
+                                                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 bg-white rotate-45 transform skew-x-12 shadow-lg"></div>
                                                     </div>
                                                 </div>
                                             );
