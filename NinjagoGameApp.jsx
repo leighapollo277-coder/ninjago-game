@@ -863,23 +863,20 @@ export default function App() {
         
         setLoadingProgress(100);
         await new Promise(r => setTimeout(r, 800)); // Show 100% briefly
-        setIsLoading(false);
-
-        // --- Cinematic Delay before Quiz Starts ---
-        await new Promise(r => setTimeout(r, 1000));
-
-        // --- Original Logic ---
+        
+        // --- Fix transition flicker: Change state while still loading ---
         setCurrentWordPool(words);
         setSelectedSubLevel(subName);
-        
-        // 計算目標分數
         const targetNumber = questionsPerLevel === 'max' ? words.length : parseInt(questionsPerLevel, 10);
         setTargetScore(targetNumber);
-
         setScore(0);
         setHeroEnergy(100);
         setGameState('playing');
 
+        await new Promise(r => setTimeout(r, 1000)); // Cinematic delay
+        setIsLoading(false);
+
+        // --- Original Logic (Cleaned up) ---
         generateQuestion(words);
         speak(`進入，${subName}！`);
     };
@@ -1195,10 +1192,7 @@ export default function App() {
                     }}
                 >
                     <div className="space-y-4">
-                        <h2 className="text-xl md:text-3xl text-yellow-300 font-bold tracking-widest drop-shadow-md">Lego Ninjago Core</h2>
-                        <h1 className="text-5xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-yellow-600 drop-shadow-lg leading-tight">
-                            忍者文字<br />大考驗
-                        </h1>
+                        {/* 移除 Lego Ninjago Core 及 忍者文字大考驗 */}
                     </div>
 
                     {/* User Profile (If logged in) */}
@@ -1228,15 +1222,7 @@ export default function App() {
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/50"></div>
                     </div>
 
-                    {/* Top Control - Overriding Global for Home */}
-                    <div className="absolute top-8 right-8 z-50">
-                        <button
-                            onClick={() => setGameState('settings')}
-                            className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-white/20 transition-all border border-white/20 group shadow-2xl"
-                        >
-                            <Settings className="w-8 h-8 text-white group-hover:rotate-90 transition-transform duration-500" />
-                        </button>
-                    </div>
+                    {/* Top Control - Removed redundant Settings icon */}
 
                     {/* Main Content */}
                     <div className="relative z-10 text-center space-y-12 max-w-4xl px-6">
@@ -1248,7 +1234,7 @@ export default function App() {
                                 旋風忍者：冒險之旅
                             </div>
                             <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                VER 0.1.6
+                                VER 0.1.7
                             </div>
                         </div>
 
@@ -1281,7 +1267,7 @@ export default function App() {
 
                         {/* 頂部導航 */}
                         <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-900/50 backdrop-blur-md z-30">
-                            <button onClick={goHome} className="p-4 rounded-full bg-slate-800 hover:bg-slate-700 transition border border-white/10">
+                            <button onClick={goHome} className="absolute bottom-6 left-6 p-4 rounded-full bg-slate-800/80 hover:bg-slate-700 transition border border-white/10 z-50">
                                 <Home className="w-8 h-8" />
                             </button>
                             <div className="text-center">
@@ -1474,7 +1460,7 @@ export default function App() {
 
                         <div className="w-full flex justify-end items-center text-white px-2 mt-[-20px] mb-4">
                             <div className={`bg-slate-800 text-yellow-300 px-4 py-1 rounded-full border-2 border-slate-600 font-bold text-lg shadow-md`}>
-                                關卡 {level} {selectedSubLevel !== 'all' && `| ${selectedSubLevel}`}
+                                {selectedSubLevel === 'all' ? '隨機挑戰' : selectedSubLevel}
                             </div>
                         </div>
 
@@ -1545,7 +1531,7 @@ export default function App() {
                         </div>
 
                         {/* 右下角導航按鈕 (遊戲中) - 設定在上面，主頁在下面 */}
-                        <div className="absolute bottom-24 right-6 z-40 flex flex-col gap-3 pointer-events-auto">
+                        <div className="absolute bottom-6 left-6 z-50 pointer-events-auto">
                             <button onClick={goHome} className="bg-slate-800/80 p-3 rounded-full border-2 border-slate-600 text-white hover:bg-slate-700 transition shadow-lg">
                                 <Home className="w-8 h-8" />
                             </button>
@@ -1561,7 +1547,7 @@ export default function App() {
             {
                 gameState === 'settings' && (
                     <div className="flex flex-col items-center justify-center h-full z-50 bg-slate-900/95 backdrop-blur-md relative px-4 text-white overflow-y-auto py-12">
-                        <button onClick={goHome} className="absolute top-8 left-8 p-3 rounded-full bg-slate-800 hover:bg-slate-700 transition">
+                        <button onClick={goHome} className="absolute bottom-6 left-6 p-3 rounded-full bg-slate-800/80 hover:bg-slate-700 transition z-50">
                             <ChevronLeft className="w-8 h-8" />
                         </button>
 
@@ -1883,10 +1869,9 @@ export default function App() {
 
                              <button 
                                 onClick={goHome} 
-                                className="w-full py-4 bg-slate-800/50 hover:bg-slate-800 text-slate-400 font-bold text-xl rounded-2xl transition-all flex items-center justify-center gap-3 border border-white/5"
+                                className="absolute bottom-6 left-6 p-4 bg-slate-800/80 hover:bg-slate-800 text-slate-400 font-bold rounded-full transition-all flex items-center justify-center gap-3 border border-white/5 z-50 shadow-2xl"
                              >
-                                <Home className="w-6 h-6" />
-                                返回主頁
+                                <Home className="w-8 h-8" />
                              </button>
                         </div>
                         
