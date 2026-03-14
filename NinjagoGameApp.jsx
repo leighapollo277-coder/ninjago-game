@@ -86,35 +86,40 @@ const MAP_WORLDS = [
     {
         id: 0, name: '忍者啟程', subtitle: '第 1-11 關', emoji: '🌱', 
         description: '在山中神廟接受基礎訓練，掌握忍者的基本本領。', heroId: 'lloyd',
-        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-green-600/30 to-slate-950/90',
+        bg: '/assets/world_bg_1.png', medal: '/assets/medal_lloyd.png',
+        overlayColor: 'from-green-600/30 to-slate-950/90',
         borderColor: 'border-green-500', glowColor: 'shadow-green-500/30',
         levels: LEVEL_3_PRESETS.slice(0, 11)
     },
     {
         id: 1, name: '隱密訓練', subtitle: '第 12-22 關', emoji: '⛰️',
         description: '進入高峻的山脈，學會在極端環境下隱藏行蹤與作戰。', heroId: 'jay',
-        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-blue-600/30 to-slate-950/90',
+        bg: '/assets/world_bg_2.png', medal: '/assets/medal_jay.png',
+        overlayColor: 'from-blue-600/30 to-slate-950/90',
         borderColor: 'border-blue-500', glowColor: 'shadow-blue-500/30',
         levels: LEVEL_3_PRESETS.slice(11, 22)
     },
     {
         id: 2, name: '黑暗崛起', subtitle: '第 23-33 關', emoji: '🔥',
-        description: '黑暗要塞的勢力正在擴張，忍者必須深入虎穴迎接挑戰。', heroId: 'kai',
-        bg: '/assets/map_dark_fortress.png', overlayColor: 'from-red-600/30 to-slate-950/90',
+        description: '黑暗要塞的勢力正在擴張，忍者必須深入虎虎穴迎接挑戰。', heroId: 'kai',
+        bg: '/assets/world_bg_3.png', medal: '/assets/medal_kai.png',
+        overlayColor: 'from-red-600/30 to-slate-950/90',
         borderColor: 'border-red-500', glowColor: 'shadow-red-500/30',
         levels: LEVEL_3_PRESETS.slice(22, 33)
     },
     {
         id: 3, name: '終極考驗', subtitle: '第 34-44 關', emoji: '⚡',
         description: '面對黑暗魔術的最強考驗，只有意志堅定者才能勝出。', heroId: 'cole',
-        bg: '/assets/map_dark_fortress.png', overlayColor: 'from-orange-600/30 to-slate-950/90',
+        bg: '/assets/world_bg_4.png', medal: '/assets/medal_cole.png',
+        overlayColor: 'from-orange-600/30 to-slate-950/90',
         borderColor: 'border-orange-500', glowColor: 'shadow-orange-500/30',
         levels: LEVEL_3_PRESETS.slice(33, 44)
     },
     {
         id: 4, name: '傳説忍者', subtitle: '第 45-55 關', emoji: '✨',
         description: '覺醒終極潛能，成為守護世界的傳說忍者。', heroId: 'nya',
-        bg: '/assets/map_mountain_temple.png', overlayColor: 'from-purple-600/30 to-slate-950/90',
+        bg: '/assets/world_bg_5.png', medal: '/assets/medal_nya.png',
+        overlayColor: 'from-purple-600/30 to-slate-950/90',
         borderColor: 'border-purple-400', glowColor: 'shadow-purple-400/30',
         levels: LEVEL_3_PRESETS.slice(44, 55)
     }
@@ -1390,13 +1395,13 @@ export default function App() {
                                                     </div>
 
                                                     {/* Hero Avatar Center */}
-                                                    <div className="flex justify-center -mt-10">
-                                                        <div className={`relative ${isLocked ? 'grayscale' : ''}`}>
-                                                            <div className={`absolute -inset-4 rounded-full blur-2xl opacity-40 animate-pulse ${isLocked ? 'bg-slate-500' : 'bg-white'}`}></div>
-                                                            <div className={`w-36 h-36 rounded-full border-4 shadow-2xl overflow-hidden relative z-10 transition-transform duration-500 group-hover:rotate-12 ${isLocked ? 'border-slate-700' : 'border-white'}`}>
-                                                                <img src={hero.url} className="w-full h-full object-cover" alt={hero.name} />
+                                                    <div className="flex justify-center -mt-12">
+                                                        <div className={`relative ${isLocked ? 'grayscale opacity-40' : ''}`}>
+                                                            <div className={`absolute -inset-6 rounded-full blur-3xl opacity-50 animate-pulse ${isLocked ? 'bg-slate-500' : 'bg-white'}`}></div>
+                                                            <div className="w-44 h-44 relative z-10 transition-transform duration-700 group-hover:rotate-12 group-hover:scale-110">
+                                                                <img src={world.medal} className="w-full h-full object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)]" alt={hero.name} />
                                                             </div>
-                                                            <div className="absolute -bottom-2 -right-2 bg-yellow-400 w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-lg border-2 border-slate-900 group-hover:scale-110 transition-transform">
+                                                            <div className="absolute -bottom-2 -right-2 bg-yellow-400 w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-lg border-2 border-slate-900 group-hover:scale-110 transition-transform z-20">
                                                                 {world.emoji}
                                                             </div>
                                                         </div>
