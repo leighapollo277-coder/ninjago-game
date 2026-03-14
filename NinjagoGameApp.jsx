@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import pkg from './package.json';
+const VERSION = pkg.version;
+
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy } from 'lucide-react';
 
 // === 資料與常數準備 ===
@@ -1286,7 +1289,7 @@ export default function App() {
                                 旋風忍者：冒險之旅
                             </div>
                             <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                VER 0.1.9
+                                VER {VERSION}
                             </div>
                         </div>
 
