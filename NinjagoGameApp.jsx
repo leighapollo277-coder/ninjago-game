@@ -1322,61 +1322,130 @@ export default function App() {
                     
                     {/* --- 模式 1: 世界選擇 (World Select) --- */}
                     {selectedWorld === null ? (
-                        <div className="flex flex-col h-full overflow-y-auto bg-slate-950 relative p-6 md:p-12">
+                        <div className="flex flex-col h-full overflow-y-auto bg-slate-950 relative p-6 md:p-12 lg:p-20">
                             {/* Particles inside world select */}
                             <Particles />
                             
-                            <div className="relative z-10 max-w-6xl mx-auto w-full space-y-12 pb-12">
-                                <div className="text-center space-y-4">
-                                    <button onClick={goHome} className="absolute top-0 left-0 p-4 rounded-full bg-slate-800/80 hover:bg-slate-700 transition border border-white/10">
-                                        <Home className="w-8 h-8" />
+                            <div className="relative z-10 max-w-7xl mx-auto w-full space-y-16 pb-20">
+                                <div className="text-center space-y-6 relative">
+                                    <button 
+                                        onClick={goHome} 
+                                        className="absolute top-0 left-0 p-5 rounded-3xl bg-slate-900/80 hover:bg-slate-800 transition-all border-2 border-white/10 shadow-2xl group active:scale-95 z-20"
+                                    >
+                                        <Home className="w-8 h-8 text-yellow-500 group-hover:scale-110 transition-transform" />
                                     </button>
-                                    <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-500 to-amber-600 italic tracking-tighter">NINJA WORLDS</h1>
-                                    <p className="text-sm md:text-xl text-slate-400 font-bold uppercase tracking-[0.5em]">選擇你的修煉世界</p>
+                                    
+                                    <h1 className="text-6xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-yellow-500 to-amber-600 italic tracking-tighter drop-shadow-[0_15px_15px_rgba(0,0,0,0.5)] leading-tight">
+                                        NINJA WORLDS
+                                    </h1>
+                                    <div className="flex items-center justify-center gap-4">
+                                        <div className="h-px w-12 md:w-32 bg-gradient-to-r from-transparent to-yellow-500/50"></div>
+                                        <p className="text-lg md:text-2xl text-slate-400 font-bold uppercase tracking-[0.6em] whitespace-nowrap">探索你的修煉世界</p>
+                                        <div className="h-px w-12 md:w-32 bg-gradient-to-l from-transparent to-yellow-500/50"></div>
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-8 pt-10">
                                     {MAP_WORLDS.map((world, idx) => {
-                                        // 世界解鎖條件：前一個世界的所有關卡都已完成
                                         const prevWorld = idx > 0 ? MAP_WORLDS[idx-1] : null;
                                         const isLocked = prevWorld && prevWorld.levels.some(l => !completedLevels.subLevels.includes(l.name));
                                         
+                                        // 計算世界進度
+                                        const totalLevels = world.levels.length;
+                                        const doneLevels = world.levels.filter(l => completedLevels.subLevels.includes(l.name)).length;
+                                        const progressPercent = Math.round((doneLevels / totalLevels) * 100);
+                                        const hero = CHARACTERS.find(c => c.id === world.heroId) || CHARACTERS[0];
+
                                         return (
-                                            <button
+                                            <div
                                                 key={world.name}
-                                                onClick={() => !isLocked && (setSelectedWorld(world), setSelectedChapterNodes(generateChapterNodes(world.levels)))}
-                                                className={`group relative p-8 rounded-[40px] border-4 transition-all duration-500 overflow-hidden text-left h-64 md:h-80 ${
+                                                className={`group relative flex flex-col rounded-[50px] border-4 transition-all duration-700 overflow-hidden h-[500px] md:h-[600px] shadow-2xl ${
                                                     isLocked 
-                                                    ? 'bg-slate-900/50 border-slate-800 grayscale cursor-not-allowed opacity-60' 
-                                                    : `bg-slate-900/40 ${world.borderColor} hover:scale-[1.03] active:scale-95 ${world.glowColor} hover:shadow-[0_0_50px_rgba(255,255,255,0.1)]`
+                                                    ? 'bg-slate-900/50 border-slate-800 opacity-60' 
+                                                    : `bg-slate-900/40 ${world.borderColor} hover:scale-[1.05] hover:-translate-y-4 ${world.glowColor} hover:shadow-[0_40px_80px_rgba(0,0,0,0.6)]`
                                                 }`}
                                             >
-                                                {/* 背景圖預覽 */}
-                                                <div className="absolute inset-0 opacity-20 filter blur-sm group-hover:blur-none transition-all duration-700">
-                                                    <img src={world.bg} className="w-full h-full object-cover" alt="" />
-                                                    <div className={`absolute inset-0 bg-gradient-to-br ${world.overlayColor}`}></div>
+                                                {/* 背景圖與動態遮罩 */}
+                                                <div className="absolute inset-0 z-0">
+                                                    <img src={world.bg} className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-1000 blur-sm group-hover:blur-none" alt="" />
+                                                    <div className={`absolute inset-0 bg-gradient-to-b ${world.overlayColor} to-slate-950 via-slate-950/40`}></div>
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90"></div>
                                                 </div>
 
-                                                <div className="relative z-10 h-full flex flex-col justify-between">
+                                                <div className="relative z-10 h-full flex flex-col p-8 md:p-10 justify-between">
+                                                    {/* Header: World No & Status */}
                                                     <div className="flex justify-between items-start">
-                                                        <span className="text-5xl">{world.emoji}</span>
+                                                        <div className="bg-black/50 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
+                                                            <span className="text-yellow-400 font-black italic tracking-tighter text-lg">CHAPTER 0{world.id + 1}</span>
+                                                        </div>
                                                         {isLocked ? (
-                                                            <div className="bg-slate-800/80 p-2 rounded-full border border-white/10">
+                                                            <div className="bg-slate-800/80 p-3 rounded-2xl border border-white/10 shadow-lg">
                                                                 <XCircle className="w-6 h-6 text-slate-500" />
                                                             </div>
                                                         ) : (
-                                                            <div className="bg-green-500/20 px-3 py-1 rounded-full border border-green-500/50 text-green-400 text-xs font-black uppercase">
-                                                                Unlocked
+                                                            <div className="bg-green-500 px-4 py-1.5 rounded-full border-2 border-white/20 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-500/30">
+                                                                已開通
                                                             </div>
                                                         )}
                                                     </div>
-                                                    
-                                                    <div className="space-y-1">
-                                                        <h3 className="text-sm text-slate-400 font-bold uppercase tracking-widest">{world.subtitle}</h3>
-                                                        <h2 className="text-3xl md:text-4xl font-black text-white">{world.name}</h2>
+
+                                                    {/* Hero Avatar Center */}
+                                                    <div className="flex justify-center -mt-10">
+                                                        <div className={`relative ${isLocked ? 'grayscale' : ''}`}>
+                                                            <div className={`absolute -inset-4 rounded-full blur-2xl opacity-40 animate-pulse ${isLocked ? 'bg-slate-500' : 'bg-white'}`}></div>
+                                                            <div className={`w-36 h-36 rounded-full border-4 shadow-2xl overflow-hidden relative z-10 transition-transform duration-500 group-hover:rotate-12 ${isLocked ? 'border-slate-700' : 'border-white'}`}>
+                                                                <img src={hero.url} className="w-full h-full object-cover" alt={hero.name} />
+                                                            </div>
+                                                            <div className="absolute -bottom-2 -right-2 bg-yellow-400 w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-lg border-2 border-slate-900 group-hover:scale-110 transition-transform">
+                                                                {world.emoji}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Bottom Content: Title, Progress, Button */}
+                                                    <div className="space-y-6">
+                                                        <div className="space-y-2">
+                                                            <h2 className="text-4xl font-black text-white group-hover:text-yellow-400 transition-colors tracking-tighter italic">{world.name}</h2>
+                                                            <p className="text-sm text-slate-300 font-bold line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+                                                                {world.description}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            <div className="flex justify-between items-end text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                                                <span>修煉進度</span>
+                                                                <span className="text-yellow-400">{progressPercent}%</span>
+                                                            </div>
+                                                            <div className="h-2.5 bg-slate-800/50 rounded-full border border-white/5 overflow-hidden p-0.5">
+                                                                <div 
+                                                                    className={`h-full rounded-full transition-all duration-1000 delay-300 relative ${isLocked ? 'bg-slate-700' : 'bg-gradient-to-r from-yellow-400 to-amber-600'}`}
+                                                                    style={{ width: isLocked ? '0%' : `${progressPercent}%` }}
+                                                                >
+                                                                    <div className="absolute inset-0 bg-white/20 shimmer-anim"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {isLocked ? (
+                                                            <div className="w-full py-5 bg-slate-800/50 border-2 border-white/5 rounded-3xl text-slate-500 font-black flex items-center justify-center gap-3">
+                                                                尚未解鎖 🔒
+                                                            </div>
+                                                        ) : (
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSelectedWorld(world);
+                                                                    setSelectedChapterNodes(generateChapterNodes(world.levels));
+                                                                    speak(`準備前往，${world.name}！`);
+                                                                }}
+                                                                className="w-full py-5 bg-white text-slate-900 font-black text-lg rounded-3xl shadow-[0_10px_0_rgb(200,200,200)] hover:shadow-none hover:translate-y-1 active:translate-y-2 transition-all duration-100 flex items-center justify-center gap-3 group/btn"
+                                                            >
+                                                                <Play className="w-5 h-5 fill-slate-900 group-hover/btn:scale-125 transition-transform" />
+                                                                進入挑戰
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            </button>
+                                            </div>
                                         );
                                     })}
                                 </div>
