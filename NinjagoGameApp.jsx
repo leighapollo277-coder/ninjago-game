@@ -1561,39 +1561,90 @@ export default function App() {
                                         const isActive = globalIdx === (firstUncompletedGlobalIdx === -1 ? LEVEL_3_PRESETS.length - 1 : firstUncompletedGlobalIdx);
 
                                         return (
-                                            <div 
+                                            <div
                                                 key={node.name}
-                                                style={{ left: node.x, top: node.y }}
-                                                className={`absolute -translate-x-1/2 -translate-y-1/2 z-10 transition-transform map-node cursor-pointer`}
-                                                ref={isActive ? activeNodeRef : null}
+                                                className="absolute z-10 transition-all duration-700 animate-float-node"
+                                                style={{ 
+                                                    left: node.x, 
+                                                    top: node.y, 
+                                                    transform: 'translate(-50%, -50%)',
+                                                    '--float-duration': `${3 + idx * 0.2}s`
+                                                }}
                                             >
-                                                <button
-                                                    onClick={() => !isLocked && startSubLevel(node.words, node.name)}
-                                                    className={`group relative p-6 md:p-8 rounded-3xl border-4 transition-all duration-300 ${
-                                                        isLocked 
-                                                        ? 'bg-slate-900/90 border-slate-800 cursor-not-allowed grayscale' 
+                                                {/* Floating Island Base */}
+                                                <div className={`relative group w-24 h-24 flex items-center justify-center rounded-3xl transition-all duration-500 shadow-2xl ${
+                                                    isLocked 
+                                                    ? 'bg-slate-900 border-2 border-slate-800 opacity-40 grayscale' 
+                                                    : `cursor-pointer ring-4 ring-offset-4 ring-offset-transparent transform hover:scale-110 active:scale-90 ${
+                                                        isActive 
+                                                        ? 'ring-yellow-400 border-4 border-yellow-300 bg-slate-800 shadow-[0_0_40px_rgba(250,204,21,0.5)]' 
                                                         : isCompleted 
-                                                            ? 'bg-green-500 border-white shadow-[0_10px_20px_rgba(34,197,94,0.3)] scale-90 hover:scale-100' 
-                                                            : 'bg-gradient-to-br from-yellow-400 to-amber-500 border-white shadow-[0_15px_30px_rgba(234,179,8,0.4)] scale-110 hover:scale-125 hover:-translate-y-2'
-                                                    }`}
-                                                    style={{ 
-                                                        filter: isActive ? 'url(#nodeGlow)' : 'none'
-                                                    }}
-                                                >
-                                                    {isActive && !isCompleted && (
-                                                        <div className="absolute -inset-4 bg-yellow-400/30 rounded-[40px] animate-pulse blur-xl"></div>
-                                                    )}
-                                                    <span className="text-3xl font-black text-slate-950">
-                                                        {isLocked ? '🔒' : isCompleted ? '✅' : idx + 1}
-                                                    </span>
-                                                    
-                                                    {/* Label overlay on hover */}
+                                                            ? 'ring-green-500/50 border-4 border-green-400 bg-slate-800' 
+                                                            : 'ring-white/20 border-4 border-slate-600 bg-slate-800'
+                                                      }`
+                                                }`}>
+                                                    {/* Texture / Detail on platform */}
+                                                    <div className="absolute inset-0 opacity-20 pointer-events-none rounded-2xl overflow-hidden">
+                                                        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.2),transparent)]"></div>
+                                                    </div>
+
+                                                    {/* Content: Number or Icon */}
+                                                    <div className="relative font-black text-2xl italic tracking-tighter z-20">
+                                                        {isLocked ? (
+                                                            <XCircle className="w-8 h-8 text-slate-600" />
+                                                        ) : isCompleted ? (
+                                                            <div className="relative">
+                                                                {/* Ninja Shuriken Marker */}
+                                                                <svg viewBox="0 0 24 24" className="w-12 h-12 text-slate-300 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] animate-shuriken-impact">
+                                                                    <path fill="currentColor" d="M12,2L14.5,9H21.5L16,13.5L18.5,20.5L12,16L5.5,20.5L8,13.5L2.5,9H9.5L12,2Z" />
+                                                                </svg>
+                                                                <div className="absolute -inset-2 bg-green-500/20 blur-xl rounded-full pulse-slow"></div>
+                                                            </div>
+                                                        ) : (
+                                                            <span className={isActive ? 'text-yellow-400 text-3xl' : 'text-slate-400'}>{idx + 1}</span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Click Area */}
                                                     {!isLocked && (
-                                                        <div className="absolute top-full mt-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/90 px-4 py-2 rounded-lg border border-white/20 whitespace-nowrap z-50 text-base">
-                                                            {node.name}
-                                                        </div>
+                                                        <div 
+                                                            className="absolute inset-0 z-30" 
+                                                            onClick={() => startSubLevel(node.words, node.name)}
+                                                        ></div>
                                                     )}
-                                                </button>
+                                                </div>
+
+                                                {/* Player Indicator: The Hero Sprite & Flag */}
+                                                {isActive && (
+                                                    <div className="absolute -top-32 left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center">
+                                                        {/* Nobori Banner (War Flag) */}
+                                                        <div className="absolute -right-16 top-0 w-12 h-32 flex flex-col items-center animate-banner-wave">
+                                                            <div className="w-1 h-32 bg-amber-900 rounded-full"></div>
+                                                            <div className="absolute top-4 left-1 w-12 h-20 bg-yellow-500 border-2 border-amber-900 rounded-sm flex items-center justify-center shadow-lg">
+                                                                <span className="text-amber-950 font-black text-xl [writing-mode:vertical-rl]">{idx + 1}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Hero Aura */}
+                                                        <div className="w-32 h-32 relative">
+                                                            <div className="absolute inset-0 bg-yellow-400/30 blur-3xl rounded-full scale-125 pulse-slow"></div>
+                                                            <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-75 animate-pulse"></div>
+                                                            <img src={CHARACTERS.find(c => c.id === currentHero)?.url} alt="hero" className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
+                                                        </div>
+                                                        <div className="bg-yellow-400 text-slate-900 px-4 py-1.5 rounded-full font-black text-sm shadow-xl border-2 border-slate-900 whitespace-nowrap mt-2 animate-bounce uppercase tracking-widest leading-none">
+                                                            當前位置
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Label Below Node */}
+                                                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded shadow-lg backdrop-blur-sm ${
+                                                        isActive ? 'bg-yellow-400 text-slate-900' : 'bg-slate-900/80 text-slate-400'
+                                                    }`}>
+                                                        {node.name}
+                                                    </span>
+                                                </div>
                                             </div>
                                         );
                                     })}
