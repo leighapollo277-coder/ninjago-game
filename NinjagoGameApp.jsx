@@ -377,41 +377,73 @@ export default function App() {
         return data;
     });
 
-    const mapScrollRef = useRef(null);
+    const activeNodeRef = useRef(null);
 
-    // 當進入地圖時，自動滾動到當前進度位置
+    // 當進入地圖時，自動滾動到當前進度位置並聚焦
     useEffect(() => {
-        if (gameState === 'map' && mapScrollRef.current) {
+        if (gameState === 'map') {
             const currentIdx = completedLevels.subLevels.length;
             const targetNode = MAP_NODES[Math.min(currentIdx, MAP_NODES.length - 1)];
             
             if (targetNode) {
-                // 使用稍微長一點的延遲並嘗試多次，確保容器已完全渲染
-                const scrollTask = () => {
-                    const container = mapScrollRef.current;
-                    if (container && container.clientHeight > 0) {
-                        const targetY = targetNode.y - container.clientHeight / 2;
-                        const targetX = targetNode.x - container.clientWidth / 2;
-                        
-                        container.scrollTo({
-                            top: targetY,
-                            left: targetX,
-                            behavior: 'smooth'
+                const scrollAndFocus = () => {
+                    if (activeNodeRef.current) {
+                        activeNodeRef.current.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'center'
                         });
+                        // 延遲聚焦以避免與滾動行為衝突
+                        setTimeout(() => {
+                            activeNodeRef.current?.focus();
+                        }, 500);
                         return true;
                     }
                     return false;
                 };
 
-                // 立即嘗試一次，如果失敗 300ms 後再試
-                if (!scrollTask()) {
-                    setTimeout(scrollTask, 300);
+                // 嘗試多幾次，確保佈局完成
+                if (!scrollAndFocus()) {
+                    const timer = setTimeout(scrollAndFocus, 100);
+                    return () => clearTimeout(timer);
                 }
-                // 為了保險，1000ms 後再校準一次 (處理圖片加載導致的佈局變化)
-                setTimeout(scrollTask, 1000);
             }
         }
     }, [gameState, completedLevels.subLevels.length]);
+
+    // 處理地圖鍵盤導覽
+    const handleMapKeyDown = (e) => {
+        if (gameState !== 'map') return;
+        
+        const currentIdx = completedLevels.subLevels.length;
+        const focusedElement = document.activeElement;
+        const focusedId = focusedElement?.getAttribute('data-node-id');
+        
+        if (focusedId === null) return;
+        
+        let nextId = parseInt(focusedId, 10);
+        
+        switch (e.key) {
+            case 'ArrowUp':
+            case 'ArrowLeft':
+                nextId = Math.max(0, nextId - 1);
+                break;
+            case 'ArrowDown':
+            case 'ArrowRight':
+                nextId = Math.min(MAP_NODES.length - 1, nextId + 1);
+                break;
+            default:
+                return;
+        }
+
+        // 檢查是否已鎖定
+        const isLocked = nextId > 0 && !completedLevels.subLevels.includes(MAP_NODES[nextId - 1].name);
+        if (!isLocked) {
+            const nextNode = document.querySelector(`[data-node-id="${nextId}"]`);
+            nextNode?.focus();
+            nextNode?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    };
 
     const currentVillain = level === 1 ? VILLAIN_LEVEL_1 : (level === 2 ? VILLAIN_LEVEL_2 : VILLAIN_LEVEL_3);
 
@@ -985,8 +1017,28 @@ export default function App() {
                 stroke-dashoffset: -1000;
             }
         }
-        .animate-dash {
-            animation: dash 60s linear infinite;
+        .map-node:focus {
+            outline: none;
+            transform: scale(1.15) translate(-50%, -50%);
+            z-index: 30;
+        }
+        .map-node:focus .focus-ring {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+        @keyframes focus-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(251,191,36,0.6); }
+            50% { box-shadow: 0 0 40px rgba(251,191,36,1); }
+        }
+        .focus-ring {
+            position: absolute;
+            inset: -8px;
+            border: 4px solid #fbbf24;
+            border-radius: 9999px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            animation: focus-pulse 1.5s infinite;
         }
       `}</style>
 
@@ -1094,27 +1146,8 @@ export default function App() {
                                     — 點擊開始你的忍者修煉之路 —
                                 </p>
                             </div>
-
-                            {/* Hero Preview */}
-                            <div className="pt-8 flex items-center justify-center gap-8">
-                                <div className="p-2 bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 flex items-center gap-4 pr-8">
-                                    <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-yellow-400 bg-slate-800">
-                                        <img 
-                                            src={CHARACTERS.find(c => c.skin === heroSkin)?.url || '/assets/kai.jpg'} 
-                                            className="w-full h-full object-cover"
-                                            alt="Current Hero"
-                                        />
-                                    </div>
-                                    <div className="text-left">
-                                        <div className="text-sm text-slate-400 font-bold uppercase">目前角色</div>
-                                        <div className="text-2xl font-black text-white">
-                                            {CHARACTERS.find(c => c.skin === heroSkin)?.name || '赤地'}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
-
+                    </div>
                 </div>
             )}
 
@@ -1136,8 +1169,9 @@ export default function App() {
 
                         {/* 地圖滾動區 */}
                         <div 
-                            ref={mapScrollRef}
-                            className="flex-1 overflow-auto bg-[url('/assets/home_bg.png')] bg-fixed bg-cover relative scroll-smooth scrollbar-hide"
+                            onKeyDown={handleMapKeyDown}
+                            className="flex-1 overflow-auto bg-[url('/assets/home_bg.png')] bg-fixed bg-cover relative scroll-smooth scrollbar-hide focus:outline-none"
+                            tabIndex="-1"
                         >
                             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px]"></div>
                             
@@ -1199,15 +1233,26 @@ export default function App() {
                                 {MAP_NODES.map((node, idx) => {
                                     const isLocked = idx > 0 && !completedLevels.subLevels.includes(MAP_NODES[idx - 1].name);
                                     const isCompleted = completedLevels.subLevels.includes(node.name);
+                                    const isActive = idx === Math.min(completedLevels.subLevels.length, MAP_NODES.length - 1);
 
                                     return (
                                         <div 
                                             key={node.name}
                                             style={{ left: node.x, top: node.y }}
-                                            className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
+                                            className={`absolute -translate-x-1/2 -translate-y-1/2 z-10 transition-transform map-node`}
+                                            data-node-id={idx}
+                                            tabIndex={isLocked ? -1 : 0}
+                                            ref={isActive ? activeNodeRef : null}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    !isLocked && startSubLevel(node.words, node.name);
+                                                }
+                                            }}
                                         >
+                                            <div className="focus-ring"></div>
                                             <button
                                                 onClick={() => !isLocked && startSubLevel(node.words, node.name)}
+                                                tabIndex="-1"
                                                 className={`group relative p-6 rounded-full border-4 transition-all duration-300 ${
                                                     isLocked 
                                                     ? 'bg-slate-900/80 border-slate-800 cursor-not-allowed grayscale' 
@@ -1219,12 +1264,13 @@ export default function App() {
                                                 <span className="text-3xl font-black text-slate-950">
                                                     {isLocked ? '🔒' : isCompleted ? '✅' : idx + 1}
                                                 </span>
+                                            </button>
 
                                                 {/* 標籤 */}
                                                 <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900/90 backdrop-blur-md px-6 py-2 rounded-xl border border-white/20 text-xl font-black text-white shadow-2xl">
                                                     {node.name}
                                                 </div>
-                                            </button>
+                                            </div>
                                         </div>
                                     );
                                 })}
