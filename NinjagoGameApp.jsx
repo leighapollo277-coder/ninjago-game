@@ -470,6 +470,8 @@ export default function App() {
     const [wordStats, setWordStats] = useState(() => JSON.parse(localStorage.getItem('wordStats')) || {});
     const [selectedSubLevel, setSelectedSubLevel] = useState('all'); // lesson name or set id or 'all'
     const [currentWordPool, setCurrentWordPool] = useState(WORDS_LEVEL_1_2);
+    const [sessionRemainingWords, setSessionRemainingWords] = useState([]);
+    const [resumeSessionData, setResumeSessionData] = useState(null);
     const [targetScore, setTargetScore] = useState(10);
     const [completedLevels, setCompletedLevels] = useState(() => {
         const saved = localStorage.getItem('completedLevels');
@@ -740,62 +742,43 @@ export default function App() {
 
     // --- 遊戲邏輯 ---
     const generateQuestion = useCallback((overridePool) => {
-        // 使用傳入的池或當前狀態的池
         const pool = overridePool || currentWordPool;
         if (!pool || pool.length === 0) return;
 
-        // 檢查是否有優先複習的單字 (Priority List = 以前答錯的)
-        const priorityWordsInPool = pool.filter(word => wordStats[word] && wordStats[word].priority);
-        // 過濾出普通的單字 (沒有 priority)
-        const normalWordsInPool = pool.filter(word => !wordStats[word] || !wordStats[word].priority);
-
         let targetWord;
 
-        // 大約 70% 的機會優先考錯過的字 (如果有的話)，避免連續一直考同一個讓你覺得很煩
-        // 但如果只有 priority 的字，或池子只有不到 3 個字，就強制考
-        if (priorityWordsInPool.length > 0 && (Math.random() > 0.3 || normalWordsInPool.length === 0 || pool.length <= 3)) {
-            const shuffledPriority = shuffleArray(priorityWordsInPool);
-            targetWord = shuffledPriority[0];
+        // --- 新增: 非重覆題目與進度恢復邏輯 ---
+        if (sessionRemainingWords.length > 0) {
+            targetWord = sessionRemainingWords[0];
+            setSessionRemainingWords(prev => prev.slice(1));
         } else {
-            // 從普通字池中挑選
-            // 【Low Priority Queue 邏輯】：找出 correctCount 最少的字群，只從這群裡面抽
-            let minCorrectCount = Infinity;
-            
-            // 找出最小的正確次數
-            normalWordsInPool.forEach(word => {
-                const count = wordStats[word] ? wordStats[word].correctCount : 0;
-                if (count < minCorrectCount) {
-                    minCorrectCount = count;
-                }
-            });
+            // 備用隨機邏輯 (如 pool 剛重置或其他例外)
+            const priorityWordsInPool = pool.filter(word => wordStats[word] && wordStats[word].priority);
+            const normalWordsInPool = pool.filter(word => !wordStats[word] || !wordStats[word].priority);
 
-            // 篩選出正確次數等於最小值的候選字
-            const candidateWords = normalWordsInPool.filter(word => {
-                const count = wordStats[word] ? wordStats[word].correctCount : 0;
-                return count === minCorrectCount;
-            });
-            
-            const shuffledCandidates = shuffleArray(candidateWords);
-            targetWord = shuffledCandidates[0];
+            if (priorityWordsInPool.length > 0 && (Math.random() > 0.3 || normalWordsInPool.length === 0 || pool.length <= 3)) {
+                targetWord = shuffleArray(priorityWordsInPool)[0];
+            } else {
+                let minCorrectCount = Infinity;
+                normalWordsInPool.forEach(word => {
+                    const count = wordStats[word] ? wordStats[word].correctCount : 0;
+                    if (count < minCorrectCount) minCorrectCount = count;
+                });
+                const candidateWords = normalWordsInPool.filter(word => (wordStats[word]?.correctCount || 0) === minCorrectCount);
+                targetWord = shuffleArray(candidateWords)[0];
+            }
         }
 
         const targetLen = targetWord.length;
-
-        // 找寻相同长度的干擾項
-        // 1. 先從當前池中找相同字數的（排除目標字）
         let sameLengthPool = pool.filter(w => w !== targetWord && w.length === targetLen);
 
-        // 2. 如果當前池不夠 2 個，從大池（Level 1_2 或 Level 3 全部）補
         if (sameLengthPool.length < 2) {
             const extraPool = shuffleArray([...WORDS_LEVEL_1_2, ...WORDS_LEVEL_3_ALL]);
             const filteredExtra = extraPool.filter(w => w !== targetWord && w.length === targetLen && !sameLengthPool.includes(w));
             sameLengthPool = [...sameLengthPool, ...filteredExtra];
         }
 
-        // 3. 抽取 2 個干擾項
         let distractors = shuffleArray(sameLengthPool).slice(0, 2);
-
-        // 最後的最後，如果還是找不到相同長度的字（理論上極少見），才用原本的邏輯補足（保證遊戲不崩潰）
         if (distractors.length < 2) {
             const fallbackDistractors = pool.filter(w => w !== targetWord && !distractors.includes(w));
             distractors = [...distractors, ...fallbackDistractors.slice(0, 2 - distractors.length)];
@@ -803,7 +786,6 @@ export default function App() {
 
         const optionsWords = shuffleArray([targetWord, ...distractors]);
         const shuffledChars = shuffleArray(CHARACTERS);
-
         const newOptions = optionsWords.map((word, idx) => ({
             word,
             char: shuffledChars[idx],
@@ -814,7 +796,7 @@ export default function App() {
         setCurrentQuestion(newQuestion);
         speak(`${targetWord}`);
         return newQuestion;
-    }, [speak, currentWordPool, wordStats]);
+    }, [speak, currentWordPool, wordStats, sessionRemainingWords]);
 
     const startAdventure = () => {
         setAudioAllowed(true);
@@ -832,25 +814,33 @@ export default function App() {
     };
 
     // 選擇特定子關卡並開始
-    const startSubLevel = async (words, subName) => {
-        // Determine the actual level based on subName
-        let currentLevel = 3; // All map nodes are considered Level 3
+    const startSubLevel = async (words, subName, isResuming = false) => {
+        // 檢查是否有現存進度 (只有非 resume 調用時才檢查)
+        if (!isResuming) {
+            const savedSession = localStorage.getItem('ninjago_active_session');
+            if (savedSession) {
+                const sessionData = JSON.parse(savedSession);
+                if (sessionData.subName === subName) {
+                    setResumeSessionData({ words, subName, sessionData });
+                    return; // 顯示 Resume 對話框
+                }
+            }
+        }
+
+        let currentLevel = 3; 
         if (subName === 'all' || subName === 'custom') {
-            currentLevel = 3; // Or a special level ID for these
+            currentLevel = 3;
         } else {
             const presetIndex = LEVEL_3_PRESETS.findIndex(p => p.name === subName);
-            if (presetIndex >= 0 && presetIndex < 20) currentLevel = 1; // Example: first 20 lessons are level 1
-            else if (presetIndex >= 20 && presetIndex < 40) currentLevel = 2; // Next 20 are level 2
-            else currentLevel = 3; // Remaining are level 3
+            if (presetIndex >= 0 && presetIndex < 20) currentLevel = 1; 
+            else if (presetIndex >= 20 && presetIndex < 40) currentLevel = 2; 
+            else currentLevel = 3; 
         }
         setLevel(currentLevel);
 
         // Check if locked
         const subIdx = LEVEL_3_PRESETS.findIndex(p => p.name === subName);
-        if (subIdx === 0 && !completedLevels.levels.includes(0)) { // Assuming Level 0 is a prerequisite for the first map node
-            // This logic needs to be refined based on how levels are unlocked.
-            // For now, let's assume the first map node is always available if you reach the map.
-        } else if (subIdx > 0) {
+        if (subIdx > 0) {
             const prevSubName = LEVEL_3_PRESETS[subIdx - 1].name;
             if (!completedLevels.subLevels.includes(prevSubName)) {
                 speak(`要先完成${prevSubName}先可以玩依個關別呀！`);
@@ -914,24 +904,38 @@ export default function App() {
         await new Promise(r => setTimeout(r, 800)); // Show 100% briefly
         
         // --- Fix transition flicker: Change state while still loading ---
+        // 如果是恢復進度，從 sessionData 取值；否則隨機打亂
+        let remaining;
+        let startScore = 0;
+        let startEnergy = 100;
+
+        if (isResuming && resumeSessionData?.sessionData) {
+            const s = resumeSessionData.sessionData;
+            remaining = s.remaining;
+            startScore = s.score;
+            startEnergy = s.energy;
+        } else {
+            const targetCount = questionsPerLevel === 'max' ? words.length : parseInt(questionsPerLevel, 10);
+            const actualCount = Math.min(targetCount, words.length);
+            remaining = shuffleArray([...words]).slice(0, actualCount);
+        }
+
+        setSessionRemainingWords(remaining);
         setCurrentWordPool(words);
         setSelectedSubLevel(subName);
-        const targetNumber = questionsPerLevel === 'max' ? words.length : parseInt(questionsPerLevel, 10);
-        setTargetScore(targetNumber);
-        setScore(0);
-        setHeroEnergy(100);
+        setTargetScore(isResuming ? resumeSessionData.sessionData.target : (questionsPerLevel === 'max' ? words.length : parseInt(questionsPerLevel, 10)));
+        setScore(startScore);
+        setHeroEnergy(startEnergy);
         setGameState('playing');
+        setResumeSessionData(null);
 
-        await new Promise(r => setTimeout(r, 1000)); // Cinematic delay
+        await new Promise(r => setTimeout(r, 1000));
         setIsLoading(false);
 
-        // --- Original Logic (Cleaned up) ---
         setTimeout(() => {
             const firstQuestion = generateQuestion(words);
             if (firstQuestion) {
-                speak(`進入，${subName}！。請回答：${firstQuestion.target}`);
-            } else {
-                speak(`進入，${subName}！`);
+                speak(`${isResuming ? '繼續任務：' : '進入：'}${subName}！。請回答：${firstQuestion.target}`);
             }
         }, 100);
     };
@@ -960,6 +964,16 @@ export default function App() {
                 };
             });
 
+            // --- 保存進度 ---
+            const sessionData = {
+                subName: selectedSubLevel,
+                remaining: sessionRemainingWords,
+                score: score + 1,
+                target: targetScore,
+                energy: heroEnergy
+            };
+            localStorage.setItem('ninjago_active_session', JSON.stringify(sessionData));
+
             logToGoogleSheets(currentQuestion.target, option.word, true);
             setCorrectPopup({ char: option.char, element: option.char.element, word: option.word });
 
@@ -967,7 +981,9 @@ export default function App() {
             setTimeout(() => {
                 setCorrectPopup(null);
                 if (newScore >= targetScore) {
-                    // Update completion status for map nodes
+                    // 清除進度存檔
+                    localStorage.removeItem('ninjago_active_session');
+                    
                     if (selectedSubLevel !== 'all' && selectedSubLevel !== 'custom') {
                         setCompletedLevels(prev => ({
                             ...prev,
@@ -991,6 +1007,16 @@ export default function App() {
             speak('再試下啦！');
 
             logToGoogleSheets(currentQuestion.target, option.word, false);
+
+            // --- 保存進度 (即使答錯也要存，因為能量可能扣減) ---
+            const sessionData = {
+                subName: selectedSubLevel,
+                remaining: [currentQuestion.target, ...sessionRemainingWords], // 把剛剛答錯的字插回去 (或是維持原樣，看您希望答錯是否要重考)
+                score: score,
+                target: targetScore,
+                energy: Math.max(0, heroEnergy - 10)
+            };
+            localStorage.setItem('ninjago_active_session', JSON.stringify(sessionData));
 
             // 更新 sessionMissedWords
             setSessionWrongWords(prev => {
@@ -2100,6 +2126,42 @@ export default function App() {
                         {/* Decorative Icons */}
                         <div className="absolute -top-10 -left-10 w-24 h-24 bg-red-600 rounded-3xl flex items-center justify-center text-white text-4xl shadow-xl -rotate-12 animate-bounce">🔥</div>
                         <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center text-white text-4xl shadow-xl rotate-12 animate-bounce" style={{ animationDelay: '0.5s' }}>⚡</div>
+                    </div>
+                </div>
+            )}
+            {/* ===================== 恢復進度對話框 ===================== */}
+            {resumeSessionData && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-xl animate-ninja-pop">
+                    <div className="bg-slate-900 border-2 border-yellow-400/50 rounded-[3rem] p-12 max-w-lg w-full text-center space-y-8 shadow-[0_0_100px_rgba(250,204,21,0.2)]">
+                        <div className="space-y-4">
+                            <div className="w-24 h-24 bg-yellow-400/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <RotateCcw className="w-12 h-12 text-yellow-400 animate-spin-slow" />
+                            </div>
+                            <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">偵測到進度存檔！</h2>
+                            <p className="text-slate-400 font-bold leading-relaxed">
+                                您在 <span className="text-yellow-400">{resumeSessionData.subName}</span> 還有尚未完成的任務。<br/>
+                                目前進度：{resumeSessionData.sessionData.score} / {resumeSessionData.sessionData.target}
+                            </p>
+                        </div>
+                        
+                        <div className="flex flex-col gap-4">
+                            <button 
+                                onClick={() => startSubLevel(resumeSessionData.words, resumeSessionData.subName, true)}
+                                className="w-full py-6 bg-yellow-400 hover:bg-yellow-300 text-slate-900 rounded-2xl font-black text-xl shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-3"
+                            >
+                                <Play className="w-6 h-6 fill-current" />
+                                恢復進度
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    localStorage.removeItem('ninjago_active_session');
+                                    startSubLevel(resumeSessionData.words, resumeSessionData.subName, false);
+                                }}
+                                className="w-full py-5 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black text-lg transition-all border border-white/10"
+                            >
+                                重新開始
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
