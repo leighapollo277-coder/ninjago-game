@@ -1124,6 +1124,9 @@ export default function App() {
                                 <div className="text-2xl md:text-4xl font-bold text-yellow-500 tracking-[0.5em] uppercase drop-shadow-md">
                                     旋風忍者：冒險之旅
                                 </div>
+                                <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
+                                    VER 0.1.1
+                                </div>
                             </div>
 
                             <div className="flex flex-col items-center gap-6">
