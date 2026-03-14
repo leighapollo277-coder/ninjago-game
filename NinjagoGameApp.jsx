@@ -320,7 +320,7 @@ const LoadingScreen = ({ progress, heroSkin }) => {
                 {/* 英雄跑步區 */}
                 <div className="relative w-full h-32 flex items-end">
                     <div 
-                        className="absolute bottom-0 transition-all duration-300 ease-out"
+                        className="absolute bottom-6 transition-all duration-300 ease-out"
                         style={{ left: `calc(${progress}% - 40px)` }}
                     >
                         <div className="relative">
@@ -328,7 +328,10 @@ const LoadingScreen = ({ progress, heroSkin }) => {
                                 src={hero.url} 
                                 alt="Running Hero" 
                                 className="w-24 h-24 object-contain animate-bounce"
-                                style={{ animationDuration: '0.4s' }}
+                                style={{ 
+                                    animationDuration: '0.4s',
+                                    transform: 'scaleX(-1)' // Face right
+                                }}
                             />
                             {/* 跑步煙霧效果 */}
                             <div className="absolute -left-4 bottom-0 flex gap-1">
@@ -1245,7 +1248,7 @@ export default function App() {
                                 旋風忍者：冒險之旅
                             </div>
                             <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                VER 0.1.5
+                                VER 0.1.6
                             </div>
                         </div>
 
