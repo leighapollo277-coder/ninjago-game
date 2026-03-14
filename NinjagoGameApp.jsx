@@ -1454,7 +1454,7 @@ export default function App() {
                         </div>
                     ) : (
                         /* --- 模式 2: 章節地圖 (Chapter Map) --- */
-                        <div className="flex flex-col h-full bg-slate-950 relative">
+                        <div className="flex flex-col flex-1 bg-slate-950 relative">
                             {/* 頂部導航 */}
                             <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-900/50 backdrop-blur-md z-30">
                                 <button 
@@ -1472,7 +1472,7 @@ export default function App() {
                             </div>
 
                             {/* 章節內容 (不捲動，適配視窗) */}
-                            <div className="flex-1 relative overflow-hidden bg-center bg-cover" style={{ backgroundImage: `url(${selectedWorld.bg})` }}>
+                            <div className="flex-1 relative overflow-auto bg-center bg-cover touch-pan-x touch-pan-y" style={{ backgroundImage: `url(${selectedWorld.bg})` }}>
                                 <div className={`absolute inset-0 bg-gradient-to-br ${selectedWorld.overlayColor}`}></div>
                                 
                                 <div className="relative w-[1000px] h-full mx-auto" style={{ height: 'calc(100vh - 120px)' }}>
@@ -1534,6 +1534,7 @@ export default function App() {
                                         return (
                                             <div
                                                 key={node.name}
+                                                ref={isActive ? activeNodeRef : null}
                                                 className="absolute z-10 transition-all duration-700 animate-float-node"
                                                 style={{ 
                                                     left: `${node.x}px`, 
