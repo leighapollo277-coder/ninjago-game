@@ -1125,7 +1125,7 @@ export default function App() {
                                     旋風忍者：冒險之旅
                                 </div>
                                 <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                    VER 0.1.1
+                                    VER 0.1.2
                                 </div>
                             </div>
 
@@ -1147,7 +1147,6 @@ export default function App() {
                                 <p className="text-slate-400 font-bold tracking-widest animate-pulse mt-4">
                                     — 點擊開始你的忍者修煉之路 —
                                 </p>
-                            </div>
                         </div>
                     </div>
                 </div>
