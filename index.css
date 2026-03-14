@@ -83,3 +83,20 @@
 .animate-banner-wave {
   animation: banner-wave 2s infinite ease-in-out;
 }
+
+/* Fix for Fake Transparency Grids */
+.die-cut-medal {
+  clip-path: circle(48%);
+  -webkit-clip-path: circle(48%);
+  object-fit: cover;
+}
+
+.hero-sticker-mask {
+  mask-image: radial-gradient(circle, black 50%, transparent 70%);
+  -webkit-mask-image: -webkit-radial-gradient(circle, black 50%, transparent 70%);
+  object-fit: contain;
+}
+
+.premium-glow-ring {
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.2);
+}
