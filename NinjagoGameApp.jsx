@@ -8,7 +8,10 @@ const CHARACTERS = [
     { id: 'zane', name: '冰忍', url: '/assets/zane.jpg', colorClass: 'text-cyan-600', element: '❄️ 冰雪', skin: 'zane' },
     { id: 'kai', name: '赤地', url: '/assets/kai.jpg', colorClass: 'text-red-600', element: '🔥 火焰', skin: 'kai' },
     { id: 'cole', name: '阿剛', url: '/assets/cole.jpg', colorClass: 'text-stone-800', element: '🪨 大地', skin: 'cole' },
-    { id: 'nya', name: '赤蘭', url: '/assets/nya.jpg', colorClass: 'text-sky-600', element: '💧 水', skin: 'nya' }
+    { id: 'nya', name: '赤蘭', url: '/assets/nya.jpg', colorClass: 'text-sky-600', element: '💧 水', skin: 'nya' },
+    { id: 'golden', name: '黃金忍者', url: '/assets/golden_ninja.png', colorClass: 'text-yellow-500', element: '✨ 黃金力量', skin: 'golden' },
+    { id: 'oni', name: '鬼忍者', url: '/assets/oni_ninja.png', colorClass: 'text-purple-700', element: '🌑 黑暗力量', skin: 'oni' },
+    { id: 'wu', name: '吳大師', url: '/assets/sensei_wu.png', colorClass: 'text-slate-400', element: '📜 智慧', skin: 'wu' }
 ];
 
 const VILLAIN_LEVEL_1 = { id: 'garmadon', name: '劇毒大師', url: '/assets/garmadon.jpg', colorClass: 'text-purple-600' };
@@ -877,8 +880,9 @@ export default function App() {
         setIsLoading(false);
 
         // --- Original Logic (Cleaned up) ---
-        generateQuestion(words);
-        speak(`進入，${subName}！`);
+        const firstQuestion = generateQuestion(words);
+        if (firstQuestion) speak(`進入，${subName}！。請回答：${firstQuestion.target}`);
+        else speak(`進入，${subName}！`);
     };
 
 
@@ -1234,7 +1238,7 @@ export default function App() {
                                 旋風忍者：冒險之旅
                             </div>
                             <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                VER 0.1.7
+                                VER 0.1.8
                             </div>
                         </div>
 
@@ -1280,10 +1284,10 @@ export default function App() {
                         {/* 地圖滾動區 */}
                         <div 
                             onKeyDown={handleMapKeyDown}
-                            className="flex-1 overflow-auto bg-[url('/assets/home_bg.png')] bg-fixed bg-cover relative scroll-smooth scrollbar-hide focus:outline-none"
+                            className="flex-1 overflow-auto bg-[url('/assets/map_dark_fortress.png')] bg-center bg-cover relative scroll-smooth scrollbar-hide focus:outline-none"
                             tabIndex="-1"
                         >
-                            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px]"></div>
+                            <div className="absolute inset-0 bg-slate-950/70"></div>
                             
                             <div className="relative py-20 mx-auto" style={{ width: '1000px', height: `${MAP_NODES[MAP_NODES.length-1].y + 400}px` }}>
                                 {/* 繪製連線 (SVG) */}
@@ -1385,14 +1389,14 @@ export default function App() {
                                     );
                                 })}
 
-                                {/* Independent Player Icon for Animation */}
+                                {/* Independent Player Icon for Animation - pointer-events-none so clicks pass through to map nodes */}
                                 {(() => {
                                     const firstUncompletedIdx = MAP_NODES.findIndex(node => !completedLevels.subLevels.includes(node.name));
                                     const targetNode = MAP_NODES[firstUncompletedIdx === -1 ? MAP_NODES.length - 1 : firstUncompletedIdx];
                                     
                                     return (
                                         <div 
-                                            className="absolute transition-all duration-1000 ease-in-out z-20"
+                                            className="absolute transition-all duration-1000 ease-in-out z-20 pointer-events-none"
                                             style={{ 
                                                 left: targetNode.x, 
                                                 top: targetNode.y,
