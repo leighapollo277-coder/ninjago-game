@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import pkg from './package.json';
 const VERSION = pkg.version;
 
-import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy } from 'lucide-react';
+import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
 // === 資料與常數準備 ===
 const CHARACTERS = [
@@ -1384,12 +1384,12 @@ export default function App() {
                                                             <span className="text-yellow-400 font-black italic tracking-tighter text-lg">CHAPTER 0{world.id + 1}</span>
                                                         </div>
                                                         {isLocked ? (
-                                                            <div className="bg-slate-800/80 p-3 rounded-2xl border border-white/10 shadow-lg">
-                                                                <XCircle className="w-6 h-6 text-slate-500" />
+                                                            <div className="bg-slate-800/80 p-3 rounded-2xl border border-white/10 shadow-lg group-hover:bg-red-500/20 transition-colors">
+                                                                <Lock className="w-6 h-6 text-slate-500 group-hover:text-red-400 transition-colors" />
                                                             </div>
                                                         ) : (
-                                                            <div className="bg-green-500 px-4 py-1.5 rounded-full border-2 border-white/20 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-500/30">
-                                                                已開通
+                                                            <div className="bg-green-500/20 backdrop-blur-md p-3 rounded-2xl border border-green-500/50 shadow-lg shadow-green-500/20">
+                                                                <Unlock className="w-6 h-6 text-green-400" />
                                                             </div>
                                                         )}
                                                     </div>
