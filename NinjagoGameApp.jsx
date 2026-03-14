@@ -1062,15 +1062,18 @@ export default function App() {
             </div>
 
             {/* ===================== 開始畫面 ===================== */}
+            {/* ===================== 開始畫面 ===================== */}
             {gameState === 'start' && (
-                <div className="flex flex-col items-center justify-center h-full z-10 space-y-12 relative px-4 text-center"
+                <div 
+                    className="flex flex-col items-center justify-center h-full z-10 space-y-12 relative px-4 text-center"
                     onClick={() => {
                         if (!audioAllowed) {
                             setAudioAllowed(true);
                             audioContext.bgm1.currentTime = 0;
                             audioContext.bgm1.play().catch(e => console.log(e));
                         }
-                    }}>
+                    }}
+                >
                     <div className="space-y-4">
                         <h2 className="text-xl md:text-3xl text-yellow-300 font-bold tracking-widest drop-shadow-md">Lego Ninjago Core</h2>
                         <h1 className="text-5xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-yellow-600 drop-shadow-lg leading-tight">
@@ -1080,82 +1083,82 @@ export default function App() {
 
                     {/* User Profile (If logged in) */}
                     <div className="z-20 flex flex-col items-center gap-4">
-                            {user && (
-                                <div className="flex items-center gap-4 bg-white/10 p-3 rounded-full border border-white/20">
-                                    <img src={user.picture} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400" />
-                                    <div className="text-left">
-                                        <p className="text-white font-bold leading-none">{user.name}</p>
-                                        <p className="text-yellow-400 text-xs">{user.email}</p>
-                                    </div>
-                                    <button onClick={() => {
-                                        setUser(null);
-                                        localStorage.removeItem('ninjago_user');
-                                    }} className="ml-2 text-white/50 hover:text-white"><X className="w-5 h-5"/></button>
+                        {user && (
+                            <div className="flex items-center gap-4 bg-white/10 p-3 rounded-full border border-white/20">
+                                <img src={user.picture} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400" />
+                                <div className="text-left">
+                                    <p className="text-white font-bold leading-none">{user.name}</p>
+                                    <p className="text-yellow-400 text-xs">{user.email}</p>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Cinematic Background */}
-                        <div className="absolute inset-0 z-0">
-                            <img 
-                                src="/assets/home_bg.png" 
-                                className="w-full h-full object-cover scale-105 animate-slow-zoom opacity-60" 
-                                alt="Ninjago Experience"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/50"></div>
-                        </div>
-
-                        {/* Top Control - Overriding Global for Home */}
-                        <div className="absolute top-8 right-8 z-50">
-                            <button
-                                onClick={() => setGameState('settings')}
-                                className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-white/20 transition-all border border-white/20 group shadow-2xl"
-                            >
-                                <Settings className="w-8 h-8 text-white group-hover:rotate-90 transition-transform duration-500" />
-                            </button>
-                        </div>
-
-                        {/* Main Content */}
-                        <div className="relative z-10 text-center space-y-12 max-w-4xl px-6">
-                            <div className="space-y-4 animate-ninja-pop">
-                                <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
-                                    NINJA<span className="text-yellow-400">GO</span>
-                                </h1>
-                                <div className="text-2xl md:text-4xl font-bold text-yellow-500 tracking-[0.5em] uppercase drop-shadow-md">
-                                    旋風忍者：冒險之旅
-                                </div>
-                                <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                    VER 0.1.2
-                                </div>
+                                <button onClick={() => {
+                                    setUser(null);
+                                    localStorage.removeItem('ninjago_user');
+                                }} className="ml-2 text-white/50 hover:text-white"><X className="w-5 h-5"/></button>
                             </div>
+                        )}
+                    </div>
 
-                            <div className="flex flex-col items-center gap-6">
-                                <button
-                                    onClick={() => {
-                                        setGameState('map');
-                                        speak('準備好開始冒險未？出發！');
-                                    }}
-                                    className="group relative px-16 py-8 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-[32px] shadow-[0_15px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all duration-100"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <Play className="w-12 h-12 text-slate-900 fill-slate-900" />
-                                        <span className="text-5xl font-black text-slate-900 uppercase">START</span>
-                                    </div>
-                                    <div className="absolute -inset-1 bg-yellow-400 blur opacity-20 group-hover:opacity-40 transition-opacity rounded-[32px]"></div>
-                                </button>
-                                
-                                <p className="text-slate-400 font-bold tracking-widest animate-pulse mt-4">
-                                    — 點擊開始你的忍者修煉之路 —
-                                </p>
+                    {/* Cinematic Background */}
+                    <div className="absolute inset-0 z-0">
+                        <img 
+                            src="/assets/home_bg.png" 
+                            className="w-full h-full object-cover scale-105 animate-slow-zoom opacity-60" 
+                            alt="Ninjago Experience"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/50"></div>
+                    </div>
+
+                    {/* Top Control - Overriding Global for Home */}
+                    <div className="absolute top-8 right-8 z-50">
+                        <button
+                            onClick={() => setGameState('settings')}
+                            className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-white/20 transition-all border border-white/20 group shadow-2xl"
+                        >
+                            <Settings className="w-8 h-8 text-white group-hover:rotate-90 transition-transform duration-500" />
+                        </button>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="relative z-10 text-center space-y-12 max-w-4xl px-6">
+                        <div className="space-y-4 animate-ninja-pop">
+                            <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                                NINJA<span className="text-yellow-400">GO</span>
+                            </h1>
+                            <div className="text-2xl md:text-4xl font-bold text-yellow-500 tracking-[0.5em] uppercase drop-shadow-md">
+                                旋風忍者：冒險之旅
+                            </div>
+                            <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
+                                VER 0.1.3
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col items-center gap-6">
+                            <button
+                                onClick={() => {
+                                    setGameState('map');
+                                    speak('準備好開始冒險未？出發！');
+                                }}
+                                className="group relative px-16 py-8 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-[32px] shadow-[0_15px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all duration-100"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <Play className="w-12 h-12 text-slate-900 fill-slate-900" />
+                                    <span className="text-5xl font-black text-slate-900 uppercase">START</span>
+                                </div>
+                                <div className="absolute -inset-1 bg-yellow-400 blur opacity-20 group-hover:opacity-40 transition-opacity rounded-[32px]"></div>
+                            </button>
+                            
+                            <p className="text-slate-400 font-bold tracking-widest animate-pulse mt-4">
+                                — 點擊開始你的忍者修煉之路 —
+                            </p>
                         </div>
                     </div>
                 </div>
             )}
 
             {/* ===================== 冒險地圖 ===================== */}
-            {
-                gameState === 'map' && (
-                    <div className="flex flex-col h-full z-50 bg-slate-950 relative text-white overflow-hidden animate-ninja-pop">
+            {gameState === 'map' && (
+                <div className="flex flex-col h-full z-50 bg-slate-950 relative text-white overflow-hidden animate-ninja-pop">
+
                         {/* 頂部導航 */}
                         <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-900/50 backdrop-blur-md z-30">
                             <button onClick={goHome} className="p-4 rounded-full bg-slate-800 hover:bg-slate-700 transition border border-white/10">
