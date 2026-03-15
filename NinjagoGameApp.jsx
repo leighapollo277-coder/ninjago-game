@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import pkg from './package.json';
-const VERSION = pkg.version;
+const VERSION = "0.1.10";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -128,7 +128,7 @@ const MAP_WORLDS = [
 // === 產生單一章節地香圖節點 (Zigzag進適單個视區內) ===
 const generateChapterNodes = (levels) => {
     const cols = [250, 500, 750]; // Centered 3-column layout
-    const rowHeight = 160;        // Increased vertical spacing
+    const rowHeight = 240;        // Increased vertical spacing to prevent overlap
     const startY = 150;           // Top margin
     return levels.map((level, idx) => {
         const rowIndex = Math.floor(idx / 3);
@@ -1623,16 +1623,16 @@ export default function App() {
 
                                                 {/* Player Indicator & Badge (Cleaned up) */}
                                                 {isActive && (
-                                                    <div className="absolute -top-[120px] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none">
-                                                        <div className="w-36 h-36 relative group">
-                                                            <div className="absolute inset-0 bg-yellow-400/40 blur-3xl rounded-full scale-110 animate-aura-pulse"></div>
+                                                    <div className="absolute -top-[90px] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none">
+                                                        <div className="w-24 h-24 relative group">
+                                                            <div className="absolute inset-0 bg-yellow-400/40 blur-2xl rounded-full scale-110 animate-aura-pulse"></div>
                                                             <img 
                                                                 src={CHARACTERS.find(c => c.skin === heroSkin)?.url} 
                                                                 alt="hero" 
-                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)] die-cut-medal" 
+                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_10px_rgba(0,0,0,0.7)] die-cut-medal" 
                                                             />
                                                         </div>
-                                                        <div className="bg-yellow-400 text-slate-900 px-5 py-2 rounded-full font-black text-xs shadow-xl border-2 border-slate-900 whitespace-nowrap -mt-6 z-20 animate-bounce uppercase tracking-tighter">
+                                                        <div className="bg-yellow-400 text-slate-900 px-4 py-1.5 rounded-full font-black text-[10px] shadow-xl border-2 border-slate-900 whitespace-nowrap -mt-4 z-20 animate-bounce uppercase tracking-tighter">
                                                             當前階段
                                                         </div>
                                                     </div>
