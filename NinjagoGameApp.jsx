@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import pkg from './package.json';
-const VERSION = "0.1.10";
+const VERSION = "0.1.11";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -127,18 +127,19 @@ const MAP_WORLDS = [
 
 // === 產生單一章節地香圖節點 (Zigzag進適單個视區內) ===
 const generateChapterNodes = (levels) => {
-    const cols = [250, 500, 750]; // Centered 3-column layout
-    const rowHeight = 240;        // Increased vertical spacing to prevent overlap
-    const startY = 150;           // Top margin
+    const rowHeight = 220;        // Vertical spacing
+    const startY = 180;           // Top margin
+    const centerX = 500;          // Horizontal center
+    const amplitude = 180;        // S-curve width
+    const frequency = 0.8;        // S-curve tightness
+    
     return levels.map((level, idx) => {
-        const rowIndex = Math.floor(idx / 3);
-        const posInRow = idx % 3;
-        // Zigzag: L->R then R->L
-        const colX = rowIndex % 2 === 0 
-            ? cols[posInRow] 
-            : cols[2 - posInRow];
-        const y = startY + rowIndex * rowHeight;
-        return { ...level, x: colX, y, id: idx };
+        // Winding S-curve: x = center + sin(y * frequency) * amplitude
+        // We use idx as a proxy for the progression along the path
+        const x = centerX + Math.sin(idx * frequency) * amplitude;
+        const y = startY + idx * rowHeight;
+        
+        return { ...level, x, y, id: idx };
     });
 };
 
@@ -1512,26 +1513,34 @@ export default function App() {
                                 </div>
 
                                 <div className="relative w-full max-w-[1000px] scroll-parchment min-h-[1200px] z-10 mx-auto py-24 px-4 md:px-0">
-                                    {/* Map Markings (Faded landscape details) */}
-                                    <div className="map-marking top-[15%] left-[10%]">⛰️</div>
-                                    <div className="map-marking top-[25%] right-[15%]">☁️</div>
-                                    <div className="map-marking top-[45%] left-[20%]">⛩️</div>
-                                    <div className="map-marking top-[65%] right-[25%]">⛰️</div>
-                                    <div className="map-marking top-[85%] left-[15%]">☁️</div>
-                                    <div className="map-marking top-[40%] right-[10%] scale-150">🐉</div>
+                                    {/* Map Markings (Rich landscape details) */}
+                                    <div className="map-marking top-[5%] left-[15%]">🌄</div>
+                                    <div className="map-marking top-[12%] right-[20%]">☁️</div>
+                                    <div className="map-marking top-[18%] left-[40%] scale-110">⛩️</div>
+                                    <div className="map-marking top-[25%] right-[10%]">⛰️</div>
+                                    <div className="map-marking top-[35%] left-[10%] scale-150 opacity-40">🌊</div>
+                                    <div className="map-marking top-[42%] right-[30%]">🏮</div>
+                                    <div className="map-marking top-[48%] left-[25%] scale-125">🐉</div>
+                                    <div className="map-marking top-[55%] right-[15%]">⛰️</div>
+                                    <div className="map-marking top-[62%] left-[45%] scale-110">🌲</div>
+                                    <div className="map-marking top-[70%] left-[18%] opacity-30">🌊</div>
+                                    <div className="map-marking top-[78%] right-[25%] scale-150">⛩️</div>
+                                    <div className="map-marking top-[85%] left-[30%]">☁️</div>
+                                    <div className="map-marking top-[92%] right-[10%] scale-125">🪵</div>
                                     
                                     {/* SVG Paths Layer (Ink Brush Style) */}
                                     <svg className="absolute inset-0 pointer-events-none z-0" style={{ width: '100%', height: '100%' }}>
                                         <defs>
                                             <filter id="ink-displace">
-                                                <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" result="noise" />
-                                                <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G" />
-                                                <feGaussianBlur stdDeviation="0.8" />
+                                                <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" result="noise" />
+                                                <feDisplacementMap in="SourceGraphic" in2="noise" scale="8" xChannelSelector="R" yChannelSelector="G" />
+                                                <feGaussianBlur stdDeviation="0.4" />
                                             </filter>
-                                            <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
-                                                <feGaussianBlur stdDeviation="4" result="blur"/>
+                                            <filter id="glow-elemental" x="-50%" y="-50%" width="200%" height="200%">
+                                                <feGaussianBlur stdDeviation="8" result="blur"/>
+                                                <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.13  0 0 0 0 0.77  0 0 0 0 0.36  0 0 0 1 0" />
                                                 <feMerge>
-                                                    <feMergeNode in="blur"/>
+                                                    <feMergeNode/>
                                                     <feMergeNode in="SourceGraphic"/>
                                                 </feMerge>
                                             </filter>
@@ -1549,8 +1558,8 @@ export default function App() {
                                                     <path
                                                         d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
                                                         fill="none"
-                                                        stroke="rgba(0,0,0,0.8)"
-                                                        strokeWidth="8"
+                                                        stroke="rgba(0,0,0,0.9)"
+                                                        strokeWidth="12"
                                                         strokeLinecap="round"
                                                         className="ink-path"
                                                     />
@@ -1559,9 +1568,10 @@ export default function App() {
                                                             d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
                                                             fill="none"
                                                             stroke="#c2410c"
-                                                            strokeWidth="4"
+                                                            strokeWidth="6"
                                                             strokeLinecap="round"
-                                                            opacity="0.3"
+                                                            opacity="0.4"
+                                                            filter="url(#glow-elemental)"
                                                         />
                                                     )}
                                                 </g>
@@ -1597,27 +1607,33 @@ export default function App() {
                                                 }`}>
                                                     {/* Shuriken Shape */}
                                                     <div className={`absolute inset-0 flex items-center justify-center ${isActive ? 'animate-spin-slow' : ''}`}>
-                                                        <svg viewBox="0 0 100 100" className={`w-full h-full drop-shadow-[0_5px_15px_rgba(0,0,0,0.6)] ${
-                                                            isActive ? 'text-yellow-400' : isCompleted ? 'text-amber-600' : 'text-slate-400'
+                                                        <svg viewBox="0 0 100 100" className={`w-full h-full drop-shadow-[0_8px_20px_rgba(0,0,0,0.8)] ${
+                                                            isActive ? 'text-yellow-400' : isCompleted ? 'text-amber-500' : 'text-slate-400'
                                                         }`}>
-                                                            <path fill="currentColor" d="M50 5 L58 42 L95 50 L58 58 L50 95 L42 58 L5 50 L42 42 Z" />
-                                                            <circle cx="50" cy="50" r="10" fill="rgba(0,0,0,0.8)" />
-                                                            <circle cx="50" cy="50" r="6" fill="currentColor" />
+                                                            {/* Detailed Shuriken Shape */}
+                                                            <path fill="currentColor" d="M50 0 L58 35 L95 42 L65 58 L75 95 L50 75 L25 95 L35 58 L5 42 L42 35 Z" />
+                                                            <circle cx="50" cy="50" r="18" fill="rgba(0,0,0,0.4)" stroke="currentColor" strokeWidth="2" />
+                                                            {(isCompleted || isActive) && (
+                                                                <circle cx="50" cy="50" r="12" fill="#22c55e" className="animate-pulse shadow-green-500 shadow-lg" filter="url(#glow-elemental)" />
+                                                            )}
+                                                            <circle cx="50" cy="50" r="6" fill="#065f46" />
                                                         </svg>
                                                     </div>
 
                                                     {/* Active Dragon Highlight */}
                                                     {isActive && (
-                                                        <div className="absolute inset-0 flex items-center justify-center dragon-glow z-20">
-                                                            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center p-1 border-2 border-green-300">
-                                                                <span className="text-xl">🐉</span>
+                                                        <div className="absolute inset-0 flex items-center justify-center dragon-glow z-20 pointer-events-none">
+                                                            <div className="w-14 h-14 bg-green-500/10 rounded-full flex items-center justify-center p-1 border-4 border-green-300 shadow-[0_0_30px_rgba(34,197,94,0.6)] animate-aura-pulse">
+                                                                <span className="text-2xl drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">🐉</span>
                                                             </div>
                                                         </div>
                                                     )}
 
                                                     {/* Level Label */}
-                                                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 font-black text-xs text-slate-900/60 uppercase tracking-widest whitespace-nowrap">
-                                                        Lv.{idx + 1}
+                                                    <div className={`absolute -bottom-7 left-1/2 -translate-x-1/2 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${
+                                                        isActive ? 'text-yellow-500 scale-125 transition-transform' : 'text-slate-950/40'
+                                                    }`}>
+                                                        Study Point {idx + 1}
                                                     </div>
                                                 </div>
 
