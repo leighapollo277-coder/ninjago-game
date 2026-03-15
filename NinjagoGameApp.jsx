@@ -1511,13 +1511,22 @@ export default function App() {
                                     <div className="scroll-roller mb-[-20px]"></div>
                                 </div>
 
-                                <div className="relative w-full max-w-[1000px] scroll-parchment min-h-screen z-10 mx-auto py-20 px-4 md:px-0">
+                                <div className="relative w-full max-w-[1000px] scroll-parchment min-h-[1200px] z-10 mx-auto py-24 px-4 md:px-0">
+                                    {/* Map Markings (Faded landscape details) */}
+                                    <div className="map-marking top-[15%] left-[10%]">⛰️</div>
+                                    <div className="map-marking top-[25%] right-[15%]">☁️</div>
+                                    <div className="map-marking top-[45%] left-[20%]">⛩️</div>
+                                    <div className="map-marking top-[65%] right-[25%]">⛰️</div>
+                                    <div className="map-marking top-[85%] left-[15%]">☁️</div>
+                                    <div className="map-marking top-[40%] right-[10%] scale-150">🐉</div>
+                                    
                                     {/* SVG Paths Layer (Ink Brush Style) */}
                                     <svg className="absolute inset-0 pointer-events-none z-0" style={{ width: '100%', height: '100%' }}>
                                         <defs>
-                                            <filter id="ink-blur">
-                                                <feGaussianBlur stdDeviation="1.5" />
-                                                <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" />
+                                            <filter id="ink-displace">
+                                                <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" result="noise" />
+                                                <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G" />
+                                                <feGaussianBlur stdDeviation="0.8" />
                                             </filter>
                                             <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
                                                 <feGaussianBlur stdDeviation="4" result="blur"/>
@@ -1612,31 +1621,18 @@ export default function App() {
                                                     </div>
                                                 </div>
 
-                                                {/* Player Indicator: The Hero Sprite & Flag */}
+                                                {/* Player Indicator & Badge (Cleaned up) */}
                                                 {isActive && (
-                                                    <div className="absolute -top-[110px] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none">
-                                                        {/* Nobori Banner (War Flag) */}
-                                                        <div className="absolute -right-14 -top-8 w-12 h-32 flex flex-col items-center animate-banner-wave origin-bottom">
-                                                            <div className="w-1.5 h-32 bg-amber-950 rounded-full border border-black/20"></div>
-                                                            <div className="absolute top-2 left-1.5 w-11 h-20 bg-gradient-to-b from-yellow-400 to-amber-500 border-2 border-amber-950 rounded-sm flex items-center justify-center shadow-2xl">
-                                                                <span className="text-amber-950 font-black text-2xl [writing-mode:vertical-rl] py-2">{idx + 1}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Hero Sticker with Premium Aura */}
-                                                        <div className="w-36 h-36 relative group" style={{ clipPath: 'circle(48%)', WebkitClipPath: 'circle(48%)' }}>
+                                                    <div className="absolute -top-[120px] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none">
+                                                        <div className="w-36 h-36 relative group">
                                                             <div className="absolute inset-0 bg-yellow-400/40 blur-3xl rounded-full scale-110 animate-aura-pulse"></div>
-                                                            <div className="absolute inset-4 bg-white/30 blur-xl rounded-full animate-pulse transition-all group-hover:scale-150"></div>
                                                             <img 
                                                                 src={CHARACTERS.find(c => c.skin === heroSkin)?.url} 
                                                                 alt="hero" 
-                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)] hover:scale-110 transition-transform duration-500 die-cut-medal" 
+                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)] die-cut-medal" 
                                                             />
                                                         </div>
-                                                        <div className="absolute inset-0 rounded-full border-4 border-yellow-400/50 z-20 pointer-events-none scale-90"></div>
-                                                        
-                                                        {/* Location Badge */}
-                                                        <div className="bg-yellow-400 text-slate-900 px-5 py-2 rounded-full font-black text-xs shadow-[0_10px_20px_rgba(0,0,0,0.4)] border-2 border-slate-900 whitespace-nowrap -mt-6 z-20 animate-bounce uppercase tracking-tighter">
+                                                        <div className="bg-yellow-400 text-slate-900 px-5 py-2 rounded-full font-black text-xs shadow-xl border-2 border-slate-900 whitespace-nowrap -mt-6 z-20 animate-bounce uppercase tracking-tighter">
                                                             當前階段
                                                         </div>
                                                     </div>
@@ -1654,7 +1650,10 @@ export default function App() {
                                         );
                                     })}
 
-                                    {/* Player Icon on current node (REDUNDANT - removed) */}
+                                    {/* Bottom Scroll Roller */}
+                                    <div className="absolute bottom-[-20px] left-[-40px] right-[-40px] z-30">
+                                        <div className="scroll-roller"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
