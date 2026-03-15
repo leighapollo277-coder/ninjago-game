@@ -1475,6 +1475,11 @@ export default function App() {
                                             </div>
                                         );
                                     })}
+
+                                    {/* Bottom Scroll Roller */}
+                                    <div className="absolute bottom-[-20px] left-0 right-0 z-30 px-4">
+                                        <div className="scroll-roller"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1497,22 +1502,32 @@ export default function App() {
                                 <div className="w-16 md:w-32"></div>
                             </div>
 
-                            {/* 章節內容 (不捲動，適配視窗) */}
-                            <div className="flex-1 relative overflow-auto bg-center bg-cover touch-pan-x touch-pan-y" style={{ backgroundImage: `url(${selectedWorld.bg})` }}>
+                            {/* 章節內容: 命運卷軸 (The Scroll of Destiny) */}
+                            <div className="flex-1 relative overflow-auto bg-slate-900 bg-center bg-cover flex flex-col items-center py-12" style={{ backgroundImage: `url(${selectedWorld.bg})` }}>
                                 <div className={`absolute inset-0 bg-gradient-to-br ${selectedWorld.overlayColor}`}></div>
                                 
-                                <div className="relative w-[1000px] h-full mx-auto" style={{ height: 'calc(100vh - 120px)' }}>
-                                    {/* SVG Paths Layer (Centered & Glow) */}
-                                    <svg className="absolute inset-0 pointer-events-none z-0" style={{ width: '1000px', height: '100%' }}>
+                                {/* Top Scroll Roller */}
+                                <div className="relative w-full max-w-[1100px] z-30 px-4">
+                                    <div className="scroll-roller mb-[-20px]"></div>
+                                </div>
+
+                                <div className="relative w-full max-w-[1000px] scroll-parchment min-h-screen z-10 mx-auto py-20 px-4 md:px-0">
+                                    {/* SVG Paths Layer (Ink Brush Style) */}
+                                    <svg className="absolute inset-0 pointer-events-none z-0" style={{ width: '100%', height: '100%' }}>
                                         <defs>
-                                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                                <feGaussianBlur stdDeviation="3" result="blur"/>
+                                            <filter id="ink-blur">
+                                                <feGaussianBlur stdDeviation="1.5" />
+                                                <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" />
+                                            </filter>
+                                            <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
+                                                <feGaussianBlur stdDeviation="4" result="blur"/>
                                                 <feMerge>
                                                     <feMergeNode in="blur"/>
                                                     <feMergeNode in="SourceGraphic"/>
                                                 </feMerge>
                                             </filter>
                                         </defs>
+
                                         {selectedChapterNodes.slice(0, -1).map((node, i) => {
                                             const nextNode = selectedChapterNodes[i + 1];
                                             const isCompleted = completedLevels.subLevels.includes(node.name);
@@ -1525,25 +1540,21 @@ export default function App() {
                                                     <path
                                                         d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
                                                         fill="none"
-                                                        stroke="rgba(0,0,0,0.4)"
-                                                        strokeWidth="10"
+                                                        stroke="rgba(0,0,0,0.8)"
+                                                        strokeWidth="8"
                                                         strokeLinecap="round"
-                                                        className="translate-y-2 translate-x-1"
+                                                        className="ink-path"
                                                     />
-                                                    <path
-                                                        d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
-                                                        fill="none"
-                                                        stroke={isCompleted && isNextCompleted ? (selectedWorld.id === 2 ? "#ef4444" : "#4ade80") : "white"}
-                                                        strokeWidth={isCompleted && isNextCompleted ? "5" : "3"}
-                                                        strokeDasharray={isCompleted && isNextCompleted ? "0" : "8,12"}
-                                                        opacity={isCompleted && isNextCompleted ? "1" : "0.2"}
-                                                        strokeLinecap="round"
-                                                        className={isCompleted && isNextCompleted ? "animate-path-flow" : ""}
-                                                        style={{ 
-                                                            filter: isCompleted && isNextCompleted ? 'url(#glow)' : 'none',
-                                                            transition: 'all 1.5s ease'
-                                                        }}
-                                                    />
+                                                    {isCompleted && isNextCompleted && (
+                                                        <path
+                                                            d={`M ${node.x} ${node.y} C ${node.x} ${cp1y}, ${nextNode.x} ${cp2y}, ${nextNode.x} ${nextNode.y}`}
+                                                            fill="none"
+                                                            stroke="#c2410c"
+                                                            strokeWidth="4"
+                                                            strokeLinecap="round"
+                                                            opacity="0.3"
+                                                        />
+                                                    )}
                                                 </g>
                                             );
                                         })}
@@ -1561,56 +1572,44 @@ export default function App() {
                                             <div
                                                 key={node.name}
                                                 ref={isActive ? activeNodeRef : null}
-                                                className="absolute z-10 transition-all duration-700 animate-float-node"
+                                                className="absolute z-10 transition-all duration-700"
                                                 style={{ 
                                                     left: `${node.x}px`, 
                                                     top: `${node.y}px`, 
-                                                    transform: 'translate(-50%, -50%)',
-                                                    '--float-duration': `${3 + idx * 0.2}s`
+                                                    transform: 'translate(-50%, -50%)'
                                                 }}
                                             >
-                                                {/* Floating Island Base */}
-                                                <div className={`relative group w-24 h-24 flex items-center justify-center rounded-3xl transition-all duration-500 shadow-2xl ${
+                                                <div 
+                                                    onClick={!isLocked ? () => startSubLevel(node.words, node.name) : undefined}
+                                                    className={`relative group w-20 h-20 flex items-center justify-center transition-all duration-500 shuriken-gold ${
                                                     isLocked 
-                                                    ? 'bg-slate-900 border-2 border-slate-800 opacity-40 grayscale' 
-                                                    : `cursor-pointer ring-4 ring-offset-4 ring-offset-transparent transform hover:scale-110 active:scale-90 ${
-                                                        isActive 
-                                                        ? 'ring-yellow-400 border-4 border-yellow-300 bg-slate-800 shadow-[0_0_40px_rgba(250,204,21,0.5)]' 
-                                                        : isCompleted 
-                                                            ? 'ring-green-500/50 border-4 border-green-400 bg-slate-800' 
-                                                            : 'ring-white/20 border-4 border-slate-600 bg-slate-800'
-                                                      }`
+                                                    ? 'opacity-30 grayscale cursor-not-allowed' 
+                                                    : 'cursor-pointer transform hover:scale-110 active:scale-95'
                                                 }`}>
-                                                    {/* Texture / Detail on platform */}
-                                                    <div className="absolute inset-0 opacity-20 pointer-events-none rounded-2xl overflow-hidden">
-                                                        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.2),transparent)]"></div>
+                                                    {/* Shuriken Shape */}
+                                                    <div className={`absolute inset-0 flex items-center justify-center ${isActive ? 'animate-spin-slow' : ''}`}>
+                                                        <svg viewBox="0 0 100 100" className={`w-full h-full drop-shadow-[0_5px_15px_rgba(0,0,0,0.6)] ${
+                                                            isActive ? 'text-yellow-400' : isCompleted ? 'text-amber-600' : 'text-slate-400'
+                                                        }`}>
+                                                            <path fill="currentColor" d="M50 5 L58 42 L95 50 L58 58 L50 95 L42 58 L5 50 L42 42 Z" />
+                                                            <circle cx="50" cy="50" r="10" fill="rgba(0,0,0,0.8)" />
+                                                            <circle cx="50" cy="50" r="6" fill="currentColor" />
+                                                        </svg>
                                                     </div>
 
-                                                    {/* Content: Number or Icon */}
-                                                    <div className="relative font-black text-2xl italic tracking-tighter z-20">
-                                                        {isLocked ? (
-                                                            <XCircle className="w-8 h-8 text-slate-600" />
-                                                        ) : isCompleted ? (
-                                                            <div className="relative translate-y-1">
-                                                                {/* Ninja Shuriken Marker (Sharp 4-Point Design) */}
-                                                                <svg viewBox="0 0 100 100" className="w-14 h-14 text-slate-100 drop-shadow-[0_5px_10px_rgba(0,0,0,1)] animate-shuriken-impact">
-                                                                    <path fill="currentColor" d="M50 5 L55 45 L95 50 L55 55 L50 95 L45 55 L5 50 L45 45 Z" />
-                                                                    <circle cx="50" cy="50" r="5" fill="black" />
-                                                                </svg>
-                                                                <div className="absolute inset-0 bg-green-400/30 blur-2xl rounded-full scale-150 animate-aura-pulse"></div>
+                                                    {/* Active Dragon Highlight */}
+                                                    {isActive && (
+                                                        <div className="absolute inset-0 flex items-center justify-center dragon-glow z-20">
+                                                            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center p-1 border-2 border-green-300">
+                                                                <span className="text-xl">🐉</span>
                                                             </div>
-                                                        ) : (
-                                                            <span className={isActive ? 'text-yellow-400 text-3xl' : 'text-slate-400'}>{idx + 1}</span>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Click Area */}
-                                                    {!isLocked && (
-                                                        <div 
-                                                            className="absolute inset-0 z-30" 
-                                                            onClick={() => startSubLevel(node.words, node.name)}
-                                                        ></div>
+                                                        </div>
                                                     )}
+
+                                                    {/* Level Label */}
+                                                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 font-black text-xs text-slate-900/60 uppercase tracking-widest whitespace-nowrap">
+                                                        Lv.{idx + 1}
+                                                    </div>
                                                 </div>
 
                                                 {/* Player Indicator: The Hero Sprite & Flag */}
