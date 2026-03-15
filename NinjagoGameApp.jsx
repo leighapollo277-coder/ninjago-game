@@ -10,7 +10,7 @@ const CHARACTERS = [
     { id: 'jay', name: '阿光', url: '/assets/medal_jay.png', colorClass: 'text-blue-600', element: '⚡ 閃電', skin: 'jay' },
     { id: 'zane', name: '冰忍', url: '/assets/zane.png', colorClass: 'text-cyan-600', element: '❄️ 冰雪', skin: 'zane' },
     { id: 'kai', name: '赤地', url: '/assets/medal_kai.png', colorClass: 'text-red-600', element: '🔥 火焰', skin: 'kai' },
-    { id: 'cole', name: '阿剛', url: '/assets/cole.png', colorClass: 'text-stone-800', element: '🪨 大地', skin: 'cole' },
+    { id: 'cole', name: '阿剛', url: '/assets/medal_cole.png', colorClass: 'text-stone-800', element: '🪨 大地', skin: 'cole' },
     { id: 'nya', name: '赤蘭', url: '/assets/medal_nya.png', colorClass: 'text-sky-600', element: '💧 水', skin: 'nya' }
 ];
 
@@ -947,7 +947,7 @@ export default function App() {
         if (option.isTarget) {
             audioContext.correct.currentTime = 0;
             audioContext.correct.play().catch(e => console.log(e));
-            speak('好叻呀！');
+            
             const newScore = score + 1;
             setScore(newScore);
 
