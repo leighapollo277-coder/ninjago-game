@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
-const VERSION = "0.1.22";
+const VERSION = "0.1.23";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -467,10 +467,9 @@ export default function App() {
     const [sfxVolume, setSfxVolume] = useState(() => Number(localStorage.getItem('sfxVolume')) || 80);
     const [speechRate, setSpeechRate] = useState(() => Number(localStorage.getItem('speechRate')) || 0.8);
     const [questionsPerLevel, setQuestionsPerLevel] = useState(() => localStorage.getItem('questionsPerLevel') || "10"); // "10", "20", "30", "max"
-    const [globalBattleMode, setGlobalBattleMode] = useState(() => {
-        const saved = localStorage.getItem('globalBattleMode');
-        return saved !== null ? JSON.parse(saved) : true; // Default to true
-    });
+    const [globalBattleMode, setGlobalBattleMode] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const syncTimeoutRef = useRef(null);
     const [googleSheetsUrl, setGoogleSheetsUrl] = useState(() => {
         return localStorage.getItem('googleSheetsUrl') || "https://script.google.com/macros/s/AKfycbyDgDV4YLRaa1xfPPo1XkRMZGsVH09548XRIeM4KPYKwuT_Yb8uKLFLDd-kXbGW4IPz/exec";
     });
@@ -519,6 +518,7 @@ export default function App() {
     // --- 同步與紀錄系統 ---
     const syncToGoogleSheets = useCallback(() => {
         if (!googleSheetsUrl || !user) return;
+        setIsSyncing(true);
         const settings = {
             bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, masterUnlock, completedLevels, wordStats
         };
@@ -531,11 +531,15 @@ export default function App() {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify(data)
+        }).finally(() => {
+            // Give it a bit of time so the indicator doesn't flicker too fast
+            setTimeout(() => setIsSyncing(false), 800);
         });
     }, [googleSheetsUrl, user, bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, completedLevels, wordStats]);
 
     const logToGoogleSheets = useCallback((targetWord, selectedWord, isCorrect, eventType = "ANSWER") => {
         if (!googleSheetsUrl) return;
+        setIsSyncing(true);
         
         const data = {
             timestamp: new Date().toISOString(),
@@ -549,12 +553,21 @@ export default function App() {
             isCorrect: isCorrect
         };
 
+        console.log(`[Cloud Log] Sending ${eventType}:`, data);
+
         fetch(googleSheetsUrl, {
             method: 'POST',
             mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
+            // headers: { 'Content-Type': 'application/json' }, // Removed: causes silent failure in no-cors
             body: JSON.stringify(data)
-        }).catch(err => console.error("Logging failed:", err));
+        }).then(() => {
+            console.log(`[Cloud Log] ${eventType} Sent Successfully`);
+        }).catch(err => {
+            console.error("Logging failed:", err);
+        }).finally(() => {
+            if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+            syncTimeoutRef.current = setTimeout(() => setIsSyncing(false), 2000);
+        });
     }, [googleSheetsUrl, level, selectedSubLevel, user]);
 
     const syncFromGoogleSheets = (email) => {
