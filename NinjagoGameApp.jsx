@@ -128,11 +128,11 @@ const MAP_WORLDS = [
 
 // === 產生單一章節地圖節點 (Zigzag進度，帶有全局索引) ===
 const generateChapterNodes = (levels, worldIdx = 0) => {
-    const rowHeight = 220;        // Vertical spacing
-    const startY = 240;           // Top margin (增高以顯示忍者頭像)
+    const rowHeight = 350;        // Vertical spacing - Increased
+    const startY = 300;           // Top margin - Increased
     const centerX = 500;          // Horizontal center
-    const amplitude = 180;        // S-curve width
-    const frequency = 0.8;        // S-curve tightness
+    const amplitude = 220;        // S-curve width - Increased
+    const frequency = 0.6;        // S-curve tightness - Smoother
     
     // 計算該世界在全局等級中的起始位置
     let baseIdx = 0;
@@ -1671,16 +1671,16 @@ export default function App() {
                                                     transform: 'translate(-50%, -50%)'
                                                 }}
                                             >
-                                                <div 
+                                                <div
                                                     onClick={!isLocked ? () => startSubLevel(node.words, node.name) : undefined}
-                                                    className={`relative group w-full h-full flex items-center justify-center transition-all duration-500 shuriken-gold ${
+                                                    className={`relative group w-[15vw] h-[15vw] max-w-[120px] max-h-[120px] flex items-center justify-center transition-all duration-500 shuriken-gold ${
                                                     isLocked 
                                                     ? 'opacity-30 grayscale cursor-not-allowed' 
                                                     : 'cursor-pointer transform hover:scale-110 active:scale-95'
                                                 }`}>
                                                     {/* Shuriken Shape */}
                                                     <div className={`absolute inset-0 flex items-center justify-center ${isActive ? 'animate-spin-slow' : ''}`}>
-                                                        <svg viewBox="0 0 100 100" className={`w-full h-full drop-shadow-[0_8px_20px_rgba(0,0,0,0.8)] ${
+                                                        <svg viewBox="0 0 100 100" className={`w-full h-full drop-shadow-[0_1.5vw_4vw_rgba(0,0,0,0.8)] ${
                                                             isActive ? 'text-yellow-400' : isCompleted ? 'text-amber-500' : 'text-slate-400'
                                                         }`}>
                                                             {/* Detailed Shuriken Shape */}
@@ -1696,8 +1696,8 @@ export default function App() {
                                                     {/* Active Dragon Highlight */}
                                                     {isActive && (
                                                         <div className="absolute inset-0 flex items-center justify-center dragon-glow z-20 pointer-events-none">
-                                                            <div className="w-14 h-14 bg-green-500/10 rounded-full flex items-center justify-center p-1 border-4 border-green-300 shadow-[0_0_30px_rgba(34,197,94,0.6)] animate-aura-pulse">
-                                                                <span className="text-2xl drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">🐉</span>
+                                                            <div className="w-[11vw] h-[11vw] max-w-[80px] max-h-[80px] bg-green-500/10 rounded-full flex items-center justify-center p-1 border-[0.6vw] sm:border-4 border-green-300 shadow-[0_0_6vw_rgba(34,197,94,0.6)] animate-aura-pulse">
+                                                                <span className="text-[5vw] sm:text-2xl drop-shadow-[0_0_2vw_rgba(255,255,255,0.8)]">🐉</span>
                                                             </div>
                                                         </div>
                                                     )}
@@ -1705,7 +1705,7 @@ export default function App() {
 
                                                 {/* Player Indicator & Badge (Proportionate Scaling) */}
                                                 {isActive && (
-                                                    <div className="absolute -top-[25vw] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none w-[45vw] max-w-[280px]">
+                                                    <div className="absolute -top-[28vw] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none w-[45vw] max-w-[280px]">
                                                         <div className="w-[35vw] h-[35vw] max-w-[220px] max-h-[220px] relative group">
                                                             <div className="absolute inset-0 bg-yellow-400/50 blur-[10vw] rounded-full scale-125 animate-aura-pulse"></div>
                                                             <img 
@@ -1714,15 +1714,15 @@ export default function App() {
                                                                 className="w-full h-full object-contain relative z-10 drop-shadow-[0_4vw_4vw_rgba(0,0,0,0.8)] die-cut-medal" 
                                                             />
                                                         </div>
-                                                        <div className="bg-yellow-400 text-slate-900 px-[4vw] py-[1.5vw] rounded-full font-black text-[3vw] sm:text-[14px] shadow-xl border-[0.5vw] sm:border-4 border-slate-900 whitespace-nowrap -mt-[5vw] z-20 animate-bounce uppercase tracking-tighter">
+                                                        <div className="bg-yellow-400 text-slate-900 px-[4vw] py-[1.5vw] rounded-full font-black text-[3.2vw] sm:text-[14px] shadow-xl border-[0.6vw] sm:border-4 border-slate-900 whitespace-nowrap -mt-[5vw] z-20 animate-bounce uppercase tracking-tighter">
                                                             {statusLabel}
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {/* Label Below Node */}
-                                                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded shadow-lg backdrop-blur-sm ${
+                                                <div className="absolute -bottom-[6vw] sm:-bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                                                    <span className={`text-[3vw] sm:text-[14px] font-black uppercase tracking-[0.2em] px-[2vw] py-[0.5vw] rounded shadow-lg backdrop-blur-sm ${
                                                         isActive ? 'bg-yellow-400 text-slate-900' : 'bg-slate-900/80 text-slate-400'
                                                     }`}>
                                                         {node.name}
