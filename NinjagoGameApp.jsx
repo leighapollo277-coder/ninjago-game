@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
-const VERSION = "0.1.15";
+const VERSION = "0.1.16";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -560,12 +560,13 @@ export default function App() {
     const syncFromGoogleSheets = (email) => {
         if (!googleSheetsUrl) return;
         fetch(`${googleSheetsUrl}?userEmail=${email}&event=GET_SETTINGS`)
-            .then(res => res.json())
             .then(data => {
                 if (data) {
+                    console.log("Sync Data Received:", data);
                     // 1. Restore Explicit Settings
                     if (data.settings) {
                         const s = JSON.parse(data.settings);
+                        console.log("Restoring explicit settings:", s);
                         setBgmVolume(s.bgmVolume);
                         setSfxVolume(s.sfxVolume);
                         setSpeechRate(s.speechRate);
@@ -578,6 +579,7 @@ export default function App() {
 
                     // 2. Apply Reconstructed Progress (Scanned from logs)
                     if (data.reconstructedStatus && data.reconstructedStatus.subLevels) {
+                        console.log("Applying reconstructed levels:", data.reconstructedStatus.subLevels);
                         setCompletedLevels(prev => {
                             const merged = new Set([...prev.subLevels, ...data.reconstructedStatus.subLevels]);
                             return { ...prev, subLevels: Array.from(merged) };
@@ -586,9 +588,11 @@ export default function App() {
 
                     // 3. Handle Cloud Session (Partial Progress)
                     if (data.cloudSession) {
+                        console.log("Cloud session found:", data.cloudSession);
                         const localSession = JSON.parse(localStorage.getItem('ninjago_active_session'));
                         // If cloud has a session and local doesn't or cloud has more score, suggest cloud
                         if (!localSession || data.cloudSession.score > localSession.score) {
+                            console.log("Suggesting cloud session restore over local:", localSession);
                             setResumeSessionData({
                                 words: data.cloudSession.words,
                                 subName: data.cloudSession.subName,
@@ -602,6 +606,8 @@ export default function App() {
                             });
                         }
                     }
+                } else {
+                    console.log("No data returned from sync.");
                 }
             }).catch(e => console.log("Fetch settings failed", e));
     };

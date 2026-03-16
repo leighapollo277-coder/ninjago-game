@@ -11,18 +11,30 @@
  * 7. Execute as: 'Me'.
  * 8. Who has access: 'Anyone'.
  * 9. Click 'Deploy', authorize the script if prompted.
- * 10. Copy the Web App URL and paste it into the Game Settings.
  */
 
 function doPost(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var lastRow = sheet.getLastRow();
     
-    // Check if sheet is empty and add headers
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(["Timestamp", "Event", "Level", "SubLevel", "Target Word", "Selected Word", "Is Correct", "Settings", "User Email"]);
-      sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#f1f1f1");
+    // Header definition
+    var headerRow = ["Timestamp", "Event", "Level", "SubLevel", "Target Word", "Selected Word", "Is Correct", "Settings", "User Email"];
+
+    // 1. Initial Setup: If sheet is empty, add headers
+    if (lastRow === 0) {
+      sheet.appendRow(headerRow);
+      sheet.getRange(1, 1, 1, headerRow.length).setFontWeight("bold").setBackground("#f1f1f1");
       sheet.setFrozenRows(1);
+    } 
+    // 2. Migration: If transitioning from old version (7 cols) to new (9 cols)
+    else if (sheet.getLastColumn() < 9) {
+      var currentHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      if (currentHeaders.indexOf("User Email") === -1) {
+        // Update header row to the full 9 columns
+        sheet.getRange(1, 1, 1, headerRow.length).setValues([headerRow]);
+        sheet.getRange(1, 1, 1, headerRow.length).setFontWeight("bold").setBackground("#f1f1f1");
+      }
     }
 
     var data = JSON.parse(e.postData.contents);
@@ -52,32 +64,43 @@ function doPost(e) {
 function doGet(e) {
   try {
     var userEmail = e.parameter.userEmail;
-    var eventType = e.parameter.event;
-    
     if (!userEmail) return errorResponse("Missing userEmail");
 
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return ContentService.createTextOutput(JSON.stringify({})).setMimeType(ContentService.MimeType.JSON);
+
     var headers = data[0];
-    
     var lastSettings = null;
     var completedSubLevels = new Set();
     var latestSubLevel = null;
     var latestCorrectCount = 0;
     var latestWords = [];
 
-    // Helper to get column index
-    var getCol = function(name) { return headers.indexOf(name); };
+    // Helper to get column index safely
+    var getCol = function(name) { 
+        var idx = headers.indexOf(name);
+        return idx; // Returns -1 if not found
+    };
     
-    // Iterate from bottom to top to get latest settings quickly, but we need full scan for completion reconstruction
+    var emailIdx = getCol("User Email");
+    var eventIdx = getCol("Event");
+    var subLevelIdx = getCol("SubLevel");
+    var isCorrectIdx = getCol("Is Correct");
+    var settingsIdx = getCol("Settings");
+    var wordIdx = getCol("Selected Word");
+
+    // Scan data
     for (var i = 1; i < data.length; i++) {
         var row = data[i];
-        if (row[getCol("User Email")] !== userEmail) continue;
+        
+        // If email column doesn't exist or doesn't match, skip
+        if (emailIdx === -1 || row[emailIdx] !== userEmail) continue;
 
-        var event = row[getCol("Event")];
-        var subLevel = row[getCol("SubLevel")];
-        var isCorrect = row[getCol("Is Correct")];
-        var settingsStr = row[getCol("Settings")];
+        var event = eventIdx !== -1 ? row[eventIdx] : null;
+        var subLevel = subLevelIdx !== -1 ? row[subLevelIdx] : null;
+        var isCorrect = isCorrectIdx !== -1 ? row[isCorrectIdx] : null;
+        var settingsStr = settingsIdx !== -1 ? row[settingsIdx] : null;
 
         if (event === "SYNC_SETTINGS" && settingsStr && settingsStr !== "-") {
             try {
@@ -85,18 +108,19 @@ function doGet(e) {
             } catch(e) {}
         }
 
-        if (event === "COMPLETION") {
-            completedSubLevels.add(subLevel);
+        if (event === "COMPLETION" && subLevel) {
+            completedSubLevels.add(subLevel.replace('課', '關'));
         }
 
-        if (event === "ANSWER" && isCorrect === true) {
-            if (subLevel !== latestSubLevel) {
-                latestSubLevel = subLevel;
+        if (event === "ANSWER" && isCorrect === true && subLevel) {
+            var normalizedSubLevel = subLevel.replace('課', '關');
+            if (normalizedSubLevel !== latestSubLevel) {
+                latestSubLevel = normalizedSubLevel;
                 latestCorrectCount = 1;
-                latestWords = [row[getCol("Selected Word")]];
+                latestWords = [wordIdx !== -1 ? row[wordIdx] : null];
             } else {
                 latestCorrectCount++;
-                latestWords.push(row[getCol("Selected Word")]);
+                latestWords.push(wordIdx !== -1 ? row[wordIdx] : null);
             }
         }
     }
@@ -108,7 +132,6 @@ function doGet(e) {
         }
     };
 
-    // If latest level isn't in completed set, it's a "Partial Session"
     if (latestSubLevel && !completedSubLevels.has(latestSubLevel)) {
         result.cloudSession = {
             subName: latestSubLevel,
