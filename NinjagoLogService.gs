@@ -1,21 +1,9 @@
-/*
- * Google Apps Script to log data from Ninjago Game
- * 
- * SETUP INSTRUCTIONS:
- * 1. Create a new Google Sheet (sheets.new).
- * 2. Go to Extensions > Apps Script.
- * 3. Delete any existing code and paste this script.
- * 4. Click 'Deploy' > 'New deployment'.
- * 5. Select type: 'Web app'.
- * 10. Copy the Web App URL and paste it into the Game Settings.
- */
-
 function doPost(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var lastRow = sheet.getLastRow();
     
-    // Header definition
+    // Header definition - 確保順序與存入時一致
     var headerRow = ["Timestamp", "Event", "Level", "SubLevel", "Target Word", "Selected Word", "Is Correct", "Settings", "User Email"];
 
     // 1. Initial Setup: If sheet is empty, add headers
@@ -28,7 +16,6 @@ function doPost(e) {
     else {
       var currentLastCol = sheet.getLastColumn();
       if (currentLastCol < 9) {
-          // Fill in missing headers if needed
           var headers = sheet.getRange(1, 1, 1, currentLastCol).getValues()[0];
           if (headers.indexOf("User Email") === -1) {
               sheet.getRange(1, 1, 1, headerRow.length).setValues([headerRow]);
@@ -62,8 +49,10 @@ function doPost(e) {
 
 function doGet(e) {
   try {
-    var userEmail = e.parameter.userEmail;
-    if (!userEmail) return errorResponse("Missing userEmail");
+    var userEmailRaw = e.parameter.userEmail;
+    if (!userEmailRaw) return errorResponse("Missing userEmail");
+    
+    var targetEmail = String(userEmailRaw).toLowerCase().trim();
 
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var data = sheet.getDataRange().getValues();
@@ -79,10 +68,10 @@ function doGet(e) {
         totalRowsScanned: data.length - 1,
         matchingEmailRows: 0,
         availableHeaders: headers,
-        matchingRowSamples: [],
-        uniqueEventsFound: []
+        userMatchingEvents: [],
+        allEventsInSheet: [], 
+        matchingRowSamples: []
     };
-    var eventTypes = new Set();
 
     var getCol = function(name) { return headers.indexOf(name); };
     
@@ -93,46 +82,63 @@ function doGet(e) {
     var settingsIdx = getCol("Settings");
     var wordIdx = getCol("Selected Word");
 
+    var globalEventSet = new Set();
+    var userEventSet = new Set();
+
     for (var i = 1; i < data.length; i++) {
         var row = data[i];
+        if (!row || row.length === 0) continue;
+
+        var rawEmail = emailIdx !== -1 ? String(row[emailIdx] || "") : "anonymous";
+        var rowEmail = rawEmail.toLowerCase().trim();
+        var event = eventIdx !== -1 ? String(row[eventIdx] || "").trim() : "-";
         
-        // Match user by email
-        if (emailIdx !== -1 && row[emailIdx] === userEmail) {
+        if (event !== "-" && event !== "") globalEventSet.add(event);
+
+        // 核心邏輯：匹配使用者 Email
+        if (rowEmail === targetEmail) {
             debug.matchingEmailRows++;
+            if (event !== "-") userEventSet.add(event);
+            
             if (debug.matchingRowSamples.length < 5) {
                 debug.matchingRowSamples.push(row);
             }
             
-            var event = eventIdx !== -1 ? String(row[eventIdx]).trim() : null;
-            if (event) eventTypes.add(event);
-            
-            var subLevel = subLevelIdx !== -1 ? String(row[subLevelIdx]).trim() : null;
+            var subLevel = subLevelIdx !== -1 ? String(row[subLevelIdx] || "").trim() : "-";
             var isCorrect = isCorrectIdx !== -1 ? row[isCorrectIdx] : null;
-            var settingsStr = settingsIdx !== -1 ? row[settingsIdx] : null;
+            var settingsStr = settingsIdx !== -1 ? String(row[settingsIdx] || "") : null;
 
-            if (event === "SYNC_SETTINGS" && settingsStr && settingsStr !== "-") {
-                try { lastSettings = JSON.parse(settingsStr); } catch(e) {}
+            // 1. 恢復明確設定 (SYNC_SETTINGS)
+            if (event === "SYNC_SETTINGS" && settingsStr && settingsStr !== "-" && settingsStr !== "") {
+                try { 
+                    var parsed = JSON.parse(settingsStr);
+                    if (parsed) lastSettings = parsed;
+                } catch(e) {}
             }
 
-            if (event === "COMPLETION" && subLevel && subLevel !== "-") {
+            // 2. 恢復已完成關卡 (COMPLETION)
+            if (event === "COMPLETION" && subLevel !== "-" && subLevel !== "") {
                 completedSubLevels.add(subLevel.replace('課', '關'));
             }
 
-            if (event === "ANSWER" && isCorrect === true && subLevel) {
+            // 3. 恢復部分進度 (ANSWER)
+            // 注意：這裡我們使用鬆散匹配，只要 event 包含 ANSWER 就算（有些舊資料可能是 ANSWER_07 之類的）
+            if (event.indexOf("ANSWER") !== -1 && (isCorrect === true || isCorrect === "TRUE") && subLevel !== "-" && subLevel !== "") {
                 var normalizedSubLevel = subLevel.replace('課', '關');
                 if (normalizedSubLevel !== latestSubLevel) {
                     latestSubLevel = normalizedSubLevel;
                     latestCorrectCount = 1;
-                    latestWords = [wordIdx !== -1 ? row[wordIdx] : null];
+                    latestWords = [wordIdx !== -1 ? String(row[wordIdx] || "") : null];
                 } else {
                     latestCorrectCount++;
-                    latestWords.push(wordIdx !== -1 ? row[wordIdx] : null);
+                    latestWords.push(wordIdx !== -1 ? String(row[wordIdx] || "") : null);
                 }
             }
         }
     }
 
-    debug.uniqueEventsFound = Array.from(eventTypes);
+    debug.allEventsInSheet = Array.from(globalEventSet);
+    debug.userMatchingEvents = Array.from(userEventSet);
 
     var result = {
         settings: lastSettings ? JSON.stringify(lastSettings) : null,
@@ -142,6 +148,7 @@ function doGet(e) {
         debugInfo: debug
     };
 
+    // 如果最後一個活動關卡尚未標記為完成，則視為可恢復的會話
     if (latestSubLevel && !completedSubLevels.has(latestSubLevel)) {
         result.cloudSession = {
             subName: latestSubLevel,
