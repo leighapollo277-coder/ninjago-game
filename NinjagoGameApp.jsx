@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
-const VERSION = "0.1.18";
+const VERSION = "0.1.19";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -1007,7 +1007,14 @@ export default function App() {
 
         if (isResuming && resumeSessionData?.sessionData) {
             const s = resumeSessionData.sessionData;
-            remaining = s.remaining;
+            // 如果是雲端恢復 (remaining 為空)，根據 score 重新生成
+            if (s.remaining && s.remaining.length > 0) {
+                remaining = s.remaining;
+            } else {
+                const targetCount = s.target || 100;
+                const neededCount = Math.max(0, targetCount - s.score);
+                remaining = shuffleArray([...words]).slice(0, neededCount);
+            }
             startScore = s.score;
             startEnergy = s.energy;
         } else {
@@ -2276,7 +2283,9 @@ export default function App() {
                             <div className="w-24 h-24 bg-yellow-400/10 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <RotateCcw className="w-12 h-12 text-yellow-400 animate-spin-slow" />
                             </div>
-                            <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">偵測到進度存檔！</h2>
+                            <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">
+                                偵測到{resumeSessionData.isFromCloud ? '雲端' : '本地'}存檔！
+                            </h2>
                             <p className="text-slate-400 font-bold leading-relaxed">
                                 您在 <span className="text-yellow-400">{resumeSessionData.subName}</span> 還有尚未完成的任務。<br/>
                                 目前進度：{resumeSessionData.sessionData.score} / {resumeSessionData.sessionData.target}
