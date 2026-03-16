@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
-const VERSION = "0.1.13";
+const VERSION = "0.1.14";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -487,7 +487,7 @@ export default function App() {
     });
     const [completedLevels, setCompletedLevels] = useState(() => {
         const saved = localStorage.getItem('completedLevels');
-        if (!saved) return { levels: [], subLevels: [] };
+        if (!saved) return { subLevels: [] };
         
         let data = JSON.parse(saved);
         // 資料遷移: 將 "課" 統一轉換為 "關"
@@ -496,6 +496,9 @@ export default function App() {
                 typeof name === 'string' ? name.replace('課', '關') : name
             );
         }
+        // Ensure structure: if old format, wrap in subLevels
+        if (Array.isArray(data)) return { subLevels: data };
+        if (!data.subLevels) return { subLevels: [] };
         return data;
     });
 
@@ -559,16 +562,46 @@ export default function App() {
         fetch(`${googleSheetsUrl}?userEmail=${email}&event=GET_SETTINGS`)
             .then(res => res.json())
             .then(data => {
-                if (data && data.settings) {
-                    const s = JSON.parse(data.settings);
-                    setBgmVolume(s.bgmVolume);
-                    setSfxVolume(s.sfxVolume);
-                    setSpeechRate(s.speechRate);
-                    setQuestionsPerLevel(s.questionsPerLevel);
-                    setGlobalBattleMode(s.globalBattleMode);
-                    if (s.masterUnlock !== undefined) setMasterUnlock(s.masterUnlock);
-                    setCompletedLevels(s.completedLevels);
-                    setWordStats(s.wordStats);
+                if (data) {
+                    // 1. Restore Explicit Settings
+                    if (data.settings) {
+                        const s = JSON.parse(data.settings);
+                        setBgmVolume(s.bgmVolume);
+                        setSfxVolume(s.sfxVolume);
+                        setSpeechRate(s.speechRate);
+                        setQuestionsPerLevel(s.questionsPerLevel);
+                        setGlobalBattleMode(s.globalBattleMode);
+                        if (s.masterUnlock !== undefined) setMasterUnlock(s.masterUnlock);
+                        if (s.completedLevels) setCompletedLevels(s.completedLevels);
+                        if (s.wordStats) setWordStats(s.wordStats);
+                    }
+
+                    // 2. Apply Reconstructed Progress (Scanned from logs)
+                    if (data.reconstructedStatus && data.reconstructedStatus.subLevels) {
+                        setCompletedLevels(prev => {
+                            const merged = new Set([...prev.subLevels, ...data.reconstructedStatus.subLevels]);
+                            return { ...prev, subLevels: Array.from(merged) };
+                        });
+                    }
+
+                    // 3. Handle Cloud Session (Partial Progress)
+                    if (data.cloudSession) {
+                        const localSession = JSON.parse(localStorage.getItem('ninjago_active_session'));
+                        // If cloud has a session and local doesn't or cloud has more score, suggest cloud
+                        if (!localSession || data.cloudSession.score > localSession.score) {
+                            setResumeSessionData({
+                                words: data.cloudSession.words,
+                                subName: data.cloudSession.subName,
+                                sessionData: {
+                                    score: data.cloudSession.score,
+                                    target: 100, // Should ideally be dynamic from settings
+                                    energy: 100,
+                                    remaining: [] // Will regenerate on start
+                                },
+                                isFromCloud: true
+                            });
+                        }
+                    }
                 }
             }).catch(e => console.log("Fetch settings failed", e));
     };

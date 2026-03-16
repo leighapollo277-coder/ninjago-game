@@ -20,23 +20,24 @@ function doPost(e) {
     
     // Check if sheet is empty and add headers
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(["Timestamp", "Event", "Level", "SubLevel", "Target Word", "Selected Word", "Is Correct"]);
-      // Style the header: Bold and Light Gray background
-      sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#f1f1f1");
-      sheet.setFrozenRows(1); // Freeze the first row
+      sheet.appendRow(["Timestamp", "Event", "Level", "SubLevel", "Target Word", "Selected Word", "Is Correct", "Settings", "User Email"]);
+      sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#f1f1f1");
+      sheet.setFrozenRows(1);
     }
 
     var data = JSON.parse(e.postData.contents);
     
-    // Append a row: [Timestamp, Event, Level, SubLevel, TargetWord, SelectedWord, IsCorrect]
+    // Append a row: [Timestamp, Event, Level, SubLevel, TargetWord, SelectedWord, IsCorrect, Settings, UserEmail]
     sheet.appendRow([
-      data.timestamp,
+      data.timestamp || new Date().toISOString(),
       data.event || "ANSWER",
-      data.level,
-      data.subLevel,
+      data.level || "-",
+      data.subLevel || "-",
       data.targetWord || "-",
       data.selectedWord || "-",
-      data.isCorrect !== undefined ? data.isCorrect : "-"
+      data.isCorrect !== undefined ? data.isCorrect : "-",
+      data.settings || "-",
+      data.userEmail || "anonymous"
     ]);
     
     return ContentService.createTextOutput(JSON.stringify({result: "success"}))
@@ -48,19 +49,84 @@ function doPost(e) {
   }
 }
 
-// Optional: Test function to verify sheet access from within GAS editor
-function testLog() {
-  doPost({
-    postData: {
-      contents: JSON.stringify({
-        timestamp: new Date().toISOString(),
-        event: "COMPLETION",
-        level: 1,
-        subLevel: "all",
-        targetWord: "N/A",
-        selectedWord: "N/A",
-        isCorrect: true
-      })
+function doGet(e) {
+  try {
+    var userEmail = e.parameter.userEmail;
+    var eventType = e.parameter.event;
+    
+    if (!userEmail) return errorResponse("Missing userEmail");
+
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    
+    var lastSettings = null;
+    var completedSubLevels = new Set();
+    var latestSubLevel = null;
+    var latestCorrectCount = 0;
+    var latestWords = [];
+
+    // Helper to get column index
+    var getCol = function(name) { return headers.indexOf(name); };
+    
+    // Iterate from bottom to top to get latest settings quickly, but we need full scan for completion reconstruction
+    for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        if (row[getCol("User Email")] !== userEmail) continue;
+
+        var event = row[getCol("Event")];
+        var subLevel = row[getCol("SubLevel")];
+        var isCorrect = row[getCol("Is Correct")];
+        var settingsStr = row[getCol("Settings")];
+
+        if (event === "SYNC_SETTINGS" && settingsStr && settingsStr !== "-") {
+            try {
+                lastSettings = JSON.parse(settingsStr);
+            } catch(e) {}
+        }
+
+        if (event === "COMPLETION") {
+            completedSubLevels.add(subLevel);
+        }
+
+        if (event === "ANSWER" && isCorrect === true) {
+            if (subLevel !== latestSubLevel) {
+                latestSubLevel = subLevel;
+                latestCorrectCount = 1;
+                latestWords = [row[getCol("Selected Word")]];
+            } else {
+                latestCorrectCount++;
+                latestWords.push(row[getCol("Selected Word")]);
+            }
+        }
     }
-  });
+
+    var result = {
+        settings: lastSettings ? JSON.stringify(lastSettings) : null,
+        reconstructedStatus: {
+            subLevels: Array.from(completedSubLevels)
+        }
+    };
+
+    // If latest level isn't in completed set, it's a "Partial Session"
+    if (latestSubLevel && !completedSubLevels.has(latestSubLevel)) {
+        result.cloudSession = {
+            subName: latestSubLevel,
+            score: latestCorrectCount,
+            words: latestWords,
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+      return errorResponse(err.toString());
+  }
+}
+
+function errorResponse(msg) {
+  return ContentService.createTextOutput(JSON.stringify({result: "error", message: msg}))
+    .setMimeType(ContentService.MimeType.JSON);
 }
