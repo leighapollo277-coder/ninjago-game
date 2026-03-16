@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React from 'react';
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
 const VERSION = "0.1.11";
 
@@ -474,6 +475,10 @@ export default function App() {
     const [sessionRemainingWords, setSessionRemainingWords] = useState([]);
     const [resumeSessionData, setResumeSessionData] = useState(null);
     const [targetScore, setTargetScore] = useState(10);
+    const [masterUnlock, setMasterUnlock] = useState(() => {
+        const saved = localStorage.getItem('masterUnlock');
+        return saved !== null ? JSON.parse(saved) : false;
+    });
     const [completedLevels, setCompletedLevels] = useState(() => {
         const saved = localStorage.getItem('completedLevels');
         if (!saved) return { levels: [], subLevels: [] };
@@ -522,6 +527,7 @@ export default function App() {
         }
     }, [gameState, selectedChapterNodes, completedLevels.subLevels]);
 
+
     // 處理地圖鍵盤導覽
     const handleMapKeyDown = (e) => {
         if (gameState !== 'map') return;
@@ -547,7 +553,7 @@ export default function App() {
         }
 
         // 檢查是否已鎖定
-        const isLocked = nextId > 0 && !completedLevels.subLevels.includes(MAP_NODES[nextId - 1].name);
+        const isLocked = !masterUnlock && nextId > 0 && !completedLevels.subLevels.includes(MAP_NODES[nextId - 1].name);
         if (!isLocked) {
             const nextNode = document.querySelector(`[data-node-id="${nextId}"]`);
             nextNode?.focus();
@@ -565,14 +571,17 @@ export default function App() {
         localStorage.setItem('questionsPerLevel', questionsPerLevel);
         localStorage.setItem('globalBattleMode', JSON.stringify(globalBattleMode));
         localStorage.setItem('googleSheetsUrl', googleSheetsUrl);
+        localStorage.setItem('masterUnlock', JSON.stringify(masterUnlock));
         localStorage.setItem('customWordSets', JSON.stringify(customWordSets));
         localStorage.setItem('wordStats', JSON.stringify(wordStats));
         localStorage.setItem('completedLevels', JSON.stringify(completedLevels));
         localStorage.setItem('heroSkin', heroSkin);
-    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, googleSheetsUrl, customWordSets, wordStats, completedLevels, heroSkin]);
+
+        if (user) syncToGoogleSheets();
+    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, googleSheetsUrl, masterUnlock, customWordSets, wordStats, completedLevels, heroSkin, user, syncToGoogleSheets]);
 
     // --- 音效準備 ---
-    const audioContext = React.useMemo(() => {
+    const audioContext = useMemo(() => {
         const createAudio = (src) => {
             const audio = new Audio(src);
             audio.loop = true;
@@ -689,7 +698,7 @@ export default function App() {
     const syncToGoogleSheets = useCallback(() => {
         if (!googleSheetsUrl || !user) return;
         const settings = {
-            bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, completedLevels, wordStats
+            bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, masterUnlock, completedLevels, wordStats
         };
         const data = {
             userEmail: user.email,
@@ -715,6 +724,7 @@ export default function App() {
                     setSpeechRate(s.speechRate);
                     setQuestionsPerLevel(s.questionsPerLevel);
                     setGlobalBattleMode(s.globalBattleMode);
+                    if (s.masterUnlock !== undefined) setMasterUnlock(s.masterUnlock);
                     setCompletedLevels(s.completedLevels);
                     setWordStats(s.wordStats);
                 }
@@ -724,7 +734,7 @@ export default function App() {
     // 監聽設定變化並同步
     useEffect(() => {
         if (user) syncToGoogleSheets();
-    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, completedLevels, wordStats, user, syncToGoogleSheets]);
+    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, masterUnlock, completedLevels, wordStats, user, syncToGoogleSheets]);
 
     // --- 全螢幕切換 ---
     const toggleFullscreen = () => {
@@ -759,7 +769,7 @@ export default function App() {
 
             if (priorityWordsInPool.length > 0 && (Math.random() > 0.3 || normalWordsInPool.length === 0 || pool.length <= 3)) {
                 targetWord = shuffleArray(priorityWordsInPool)[0];
-            } else {
+            } else if (normalWordsInPool.length > 0) {
                 let minCorrectCount = Infinity;
                 normalWordsInPool.forEach(word => {
                     const count = wordStats[word] ? wordStats[word].correctCount : 0;
@@ -768,7 +778,14 @@ export default function App() {
                 const candidateWords = normalWordsInPool.filter(word => (wordStats[word]?.correctCount || 0) === minCorrectCount);
                 targetWord = shuffleArray(candidateWords)[0];
             }
+
+            // 最後保險：如果 targetWord 仍為空且 pool 有資料，直接隨機抽一個
+            if (!targetWord && pool.length > 0) {
+                targetWord = shuffleArray(pool)[0];
+            }
         }
+
+        if (!targetWord) return;
 
         const targetLen = targetWord.length;
         let sameLengthPool = pool.filter(w => w !== targetWord && w.length === targetLen);
@@ -1375,7 +1392,7 @@ export default function App() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-8 pt-10">
                                     {MAP_WORLDS.map((world, idx) => {
                                         const prevWorld = idx > 0 ? MAP_WORLDS[idx-1] : null;
-                                        const isLocked = prevWorld && prevWorld.levels.some(l => !completedLevels.subLevels.includes(l.name));
+                                        const isLocked = !masterUnlock && prevWorld && prevWorld.levels.some(l => !completedLevels.subLevels.includes(l.name));
                                         
                                         // 計算世界進度
                                         const totalLevels = world.levels.length;
@@ -1504,13 +1521,14 @@ export default function App() {
                             </div>
 
                             {/* 章節內容: 命運卷軸 (The Scroll of Destiny) */}
-                            <div className="flex-1 relative overflow-auto bg-slate-900 bg-center bg-cover flex flex-col items-center py-12" style={{ backgroundImage: `url(${selectedWorld.bg})` }}>
+                            <div className="flex-1 relative overflow-auto bg-slate-900 bg-center bg-cover flex flex-col items-center py-12 map-responsive-container" style={{ backgroundImage: `url(${selectedWorld.bg})` }}>
                                 <div className={`absolute inset-0 bg-gradient-to-br ${selectedWorld.overlayColor}`}></div>
                                 
-                                {/* Top Scroll Roller */}
-                                <div className="relative w-full max-w-[1100px] z-30 px-4">
-                                    <div className="scroll-roller mb-[-20px]"></div>
-                                </div>
+                                <div className="map-scaling-wrapper">
+                                    {/* Top Scroll Roller */}
+                                    <div className="relative w-full max-w-[1100px] z-30 px-4">
+                                        <div className="scroll-roller mb-[-20px]"></div>
+                                    </div>
 
                                 <div className="relative w-full max-w-[1000px] scroll-parchment min-h-[1200px] z-10 mx-auto py-24 px-4 md:px-0">
                                     {/* Map Markings (Rich landscape details) */}
@@ -1582,7 +1600,7 @@ export default function App() {
                                     {/* 繪製關卡點位 */}
                                     {selectedChapterNodes.map((node, idx) => {
                                         const globalIdx = node.id;
-                                        const isLocked = globalIdx > 0 && !completedLevels.subLevels.includes(LEVEL_3_PRESETS[globalIdx - 1].name);
+                                        const isLocked = !masterUnlock && globalIdx > 0 && !completedLevels.subLevels.includes(LEVEL_3_PRESETS[globalIdx - 1].name);
                                         const isCompleted = completedLevels.subLevels.includes(node.name);
                                         const firstUncompletedGlobalIdx = LEVEL_3_PRESETS.findIndex(n => !completedLevels.subLevels.includes(n.name));
                                         const isActive = globalIdx === (firstUncompletedGlobalIdx === -1 ? LEVEL_3_PRESETS.length - 1 : firstUncompletedGlobalIdx);
@@ -1673,9 +1691,11 @@ export default function App() {
                                 </div>
                             </div>
                         </div>
-                    )}
-                </div>
-            )}
+                    </div>
+                )
+            }
+        </div>
+    )}
 
             {/* ===================== 遊玩畫面 ===================== */}
             {gameState === 'playing' && currentQuestion && (
@@ -1913,6 +1933,26 @@ export default function App() {
                                 </div>
                                 <p className="text-sm text-slate-400">
                                     * 預設只有第55關會觸發對打模式。開啟此選項後，所有關卡都將使用主角與壞人對打的血條模式！
+                                </p>
+                            </div>
+
+                            {/* 大師解鎖模式開關 */}
+                            <div className="space-y-6 bg-slate-800/50 p-8 rounded-3xl border-2 border-slate-700 border-yellow-500/30">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-2xl font-bold flex items-center gap-3">
+                                        🔓 大師解鎖 (開啟所有關卡)
+                                    </label>
+                                    <button
+                                        onClick={() => setMasterUnlock(!masterUnlock)}
+                                        className={`w-20 h-10 rounded-full flex items-center transition-colors px-1 ${
+                                            masterUnlock ? 'bg-yellow-500 justify-end' : 'bg-slate-600 justify-start'
+                                        }`}
+                                    >
+                                        <div className="w-8 h-8 rounded-full bg-white shadow-md transform transition-transform"></div>
+                                    </button>
+                                </div>
+                                <p className="text-sm text-slate-400">
+                                    * 開啟此選項後，所有世界與關卡將立即解鎖，您可以自由選擇任何關卡進行挑戰！
                                 </p>
                             </div>
 
