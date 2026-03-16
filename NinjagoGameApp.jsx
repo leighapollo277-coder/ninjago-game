@@ -495,92 +495,110 @@ export default function App() {
 
     const activeNodeRef = useRef(null);
 
-    // 當進入地圖或章節節點更新時，自動滾動到當前進度位置並聚焦
-    useEffect(() => {
-        if (gameState === 'map' && selectedChapterNodes.length > 0) {
-            const scrollAndFocus = () => {
-                if (activeNodeRef.current) {
-                    activeNodeRef.current.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'center'
-                    });
-                    // 延遲聚焦以避免與滾動行為衝突
-                    setTimeout(() => {
-                        activeNodeRef.current?.focus();
-                    }, 300);
-                    return true;
-                }
-                return false;
-            };
-
-            // 嘗試多次滾動，因為地圖容器或節點可能有延遲渲染或動畫
-            let attempts = 0;
-            const scrollInterval = setInterval(() => {
-                if (scrollAndFocus() || attempts > 20) {
-                    clearInterval(scrollInterval);
-                }
-                attempts++;
-            }, 150);
-
-            return () => clearInterval(scrollInterval);
+    // --- 核心邏輯與語音 ---
+    const speak = useCallback((text) => {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-HK';
+            utterance.rate = speechRate;
+            window.speechSynthesis.speak(utterance);
         }
-    }, [gameState, selectedChapterNodes, completedLevels.subLevels]);
+    }, [speechRate]);
 
+    // --- 同步與紀錄系統 ---
+    const syncToGoogleSheets = useCallback(() => {
+        if (!googleSheetsUrl || !user) return;
+        const settings = {
+            bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, masterUnlock, completedLevels, wordStats
+        };
+        const data = {
+            userEmail: user.email,
+            event: "SYNC_SETTINGS",
+            settings: JSON.stringify(settings)
+        };
+        fetch(googleSheetsUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(data)
+        });
+    }, [googleSheetsUrl, user, bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, completedLevels, wordStats]);
 
-    // 處理地圖鍵盤導覽
-    const handleMapKeyDown = (e) => {
-        if (gameState !== 'map') return;
+    const logToGoogleSheets = useCallback((targetWord, selectedWord, isCorrect, eventType = "ANSWER") => {
+        if (!googleSheetsUrl) return;
         
-        const focusedElement = document.activeElement;
-        const focusedId = focusedElement?.getAttribute('data-node-id');
-        
-        if (focusedId === null) return;
-        
-        let nextId = parseInt(focusedId, 10);
-        
-        switch (e.key) {
-            case 'ArrowUp':
-            case 'ArrowLeft':
-                nextId = Math.max(0, nextId - 1);
-                break;
-            case 'ArrowDown':
-            case 'ArrowRight':
-                nextId = Math.min(MAP_NODES.length - 1, nextId + 1);
-                break;
-            default:
-                return;
-        }
+        const data = {
+            timestamp: new Date().toISOString(),
+            userEmail: user ? user.email : "anonymous",
+            userName: user ? user.name : "Anonymous",
+            event: eventType,
+            level: level,
+            subLevel: selectedSubLevel,
+            targetWord: targetWord,
+            selectedWord: selectedWord,
+            isCorrect: isCorrect
+        };
 
-        // 檢查是否已鎖定
-        const isLocked = !masterUnlock && nextId > 0 && !completedLevels.subLevels.includes(MAP_NODES[nextId - 1].name);
-        if (!isLocked) {
-            const nextNode = document.querySelector(`[data-node-id="${nextId}"]`);
-            nextNode?.focus();
-            nextNode?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        fetch(googleSheetsUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).catch(err => console.error("Logging failed:", err));
+    }, [googleSheetsUrl, level, selectedSubLevel, user]);
+
+    const syncFromGoogleSheets = (email) => {
+        if (!googleSheetsUrl) return;
+        fetch(`${googleSheetsUrl}?userEmail=${email}&event=GET_SETTINGS`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.settings) {
+                    const s = JSON.parse(data.settings);
+                    setBgmVolume(s.bgmVolume);
+                    setSfxVolume(s.sfxVolume);
+                    setSpeechRate(s.speechRate);
+                    setQuestionsPerLevel(s.questionsPerLevel);
+                    setGlobalBattleMode(s.globalBattleMode);
+                    if (s.masterUnlock !== undefined) setMasterUnlock(s.masterUnlock);
+                    setCompletedLevels(s.completedLevels);
+                    setWordStats(s.wordStats);
+                }
+            }).catch(e => console.log("Fetch settings failed", e));
+    };
+
+    const handleCredentialResponse = (response) => {
+        const parseJwt = (token) => {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        };
+
+        const userObj = parseJwt(response.credential);
+        setUser(userObj);
+        localStorage.setItem('ninjago_user', JSON.stringify(userObj));
+        // Sync data from sheet after login
+        syncFromGoogleSheets(userObj.email);
+    };
+
+    // --- 全螢幕與介面輔助 ---
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => console.error(err));
+        } else if (document.exitFullscreen) {
+            document.exitFullscreen();
         }
     };
 
-    const currentVillain = level === 1 ? VILLAIN_LEVEL_1 : (level === 2 ? VILLAIN_LEVEL_2 : VILLAIN_LEVEL_3);
-
-    // 監聽設定變化並儲存
     useEffect(() => {
-        localStorage.setItem('bgmVolume', bgmVolume);
-        localStorage.setItem('sfxVolume', sfxVolume);
-        localStorage.setItem('speechRate', speechRate);
-        localStorage.setItem('questionsPerLevel', questionsPerLevel);
-        localStorage.setItem('globalBattleMode', JSON.stringify(globalBattleMode));
-        localStorage.setItem('googleSheetsUrl', googleSheetsUrl);
-        localStorage.setItem('masterUnlock', JSON.stringify(masterUnlock));
-        localStorage.setItem('customWordSets', JSON.stringify(customWordSets));
-        localStorage.setItem('wordStats', JSON.stringify(wordStats));
-        localStorage.setItem('completedLevels', JSON.stringify(completedLevels));
-        localStorage.setItem('heroSkin', heroSkin);
+        const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', handleFsChange);
+        return () => document.removeEventListener('fullscreenchange', handleFsChange);
+    }, []);
 
-        if (user) syncToGoogleSheets();
-    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, googleSheetsUrl, masterUnlock, customWordSets, wordStats, completedLevels, heroSkin, user, syncToGoogleSheets]);
-
-    // --- 音效準備 ---
+    // --- 音效與音樂準備 ---
     const audioContext = useMemo(() => {
         const createAudio = (src) => {
             const audio = new Audio(src);
@@ -605,40 +623,7 @@ export default function App() {
         audioContext.wrong.volume = sfxVolume / 100;
     }, [bgmVolume, sfxVolume, audioContext]);
 
-    // 處理音樂播放與切換
-    useEffect(() => {
-        if (!audioAllowed) return;
-
-        if (gameState === 'playing') {
-            // For map levels, use bgm2
-            if (level === 3) {
-                audioContext.bgm1.pause();
-                audioContext.bgm2.currentTime = 0;
-                audioContext.bgm2.play().catch(e => console.log(e));
-            } else { // Fallback for other levels if they were to exist
-                audioContext.bgm2.pause();
-                audioContext.bgm1.currentTime = 0;
-                audioContext.bgm1.play().catch(e => console.log(e));
-            }
-        } else {
-            // Start 或 End 畫面時暫停音樂
-            audioContext.bgm1.pause();
-            audioContext.bgm2.pause();
-        }
-    }, [gameState, level, audioAllowed, audioContext]);
-
-    // --- 語音系統 ---
-    const speak = useCallback((text) => {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-HK';
-            utterance.rate = speechRate;
-            window.speechSynthesis.speak(utterance);
-        }
-    }, [speechRate]);
-    
-    // --- Google Auth 系統 ---
+    // Google Auth 初始化
     useEffect(() => {
         /* global google */
         if (typeof google !== 'undefined') {
@@ -653,97 +638,102 @@ export default function App() {
         }
     }, [gameState]);
 
-    const handleCredentialResponse = (response) => {
-        const userObj = parseJwt(response.credential);
-        setUser(userObj);
-        localStorage.setItem('ninjago_user', JSON.stringify(userObj));
-        // Sync data from sheet after login
-        syncFromGoogleSheets(userObj.email);
-    };
-
-    const parseJwt = (token) => {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        return JSON.parse(jsonPayload);
-    };
-
-    // --- 紀錄系統 ---
-    const logToGoogleSheets = useCallback((targetWord, selectedWord, isCorrect, eventType = "ANSWER") => {
-        if (!googleSheetsUrl) return;
-        
-        const data = {
-            timestamp: new Date().toISOString(),
-            userEmail: user ? user.email : "anonymous",
-            userName: user ? user.name : "Anonymous",
-            event: eventType,
-            level: level,
-            subLevel: selectedSubLevel,
-            targetWord: targetWord,
-            selectedWord: selectedWord,
-            isCorrect: isCorrect
-        };
-
-        fetch(googleSheetsUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        }).catch(err => console.error("Logging failed:", err));
-    }, [googleSheetsUrl, level, selectedSubLevel, user]);
-
-    // --- 同步系統 ---
-    const syncToGoogleSheets = useCallback(() => {
-        if (!googleSheetsUrl || !user) return;
-        const settings = {
-            bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, masterUnlock, completedLevels, wordStats
-        };
-        const data = {
-            userEmail: user.email,
-            event: "SYNC_SETTINGS",
-            settings: JSON.stringify(settings)
-        };
-        fetch(googleSheetsUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify(data)
-        });
-    }, [googleSheetsUrl, user, bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, completedLevels, wordStats]);
-
-    const syncFromGoogleSheets = (email) => {
-        if (!googleSheetsUrl) return;
-        fetch(`${googleSheetsUrl}?userEmail=${email}&event=GET_SETTINGS`)
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.settings) {
-                    const s = JSON.parse(data.settings);
-                    setBgmVolume(s.bgmVolume);
-                    setSfxVolume(s.sfxVolume);
-                    setSpeechRate(s.speechRate);
-                    setQuestionsPerLevel(s.questionsPerLevel);
-                    setGlobalBattleMode(s.globalBattleMode);
-                    if (s.masterUnlock !== undefined) setMasterUnlock(s.masterUnlock);
-                    setCompletedLevels(s.completedLevels);
-                    setWordStats(s.wordStats);
-                }
-            }).catch(e => console.log("Fetch settings failed", e));
-    };
-
-    // 監聽設定變化並同步
+    // 監聽地圖捲動與聚焦
     useEffect(() => {
-        if (user) syncToGoogleSheets();
-    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, masterUnlock, completedLevels, wordStats, user, syncToGoogleSheets]);
+        if (gameState === 'map' && selectedChapterNodes.length > 0) {
+            const scrollAndFocus = () => {
+                if (activeNodeRef.current) {
+                    activeNodeRef.current.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center'
+                    });
+                    setTimeout(() => {
+                        activeNodeRef.current?.focus();
+                    }, 300);
+                    return true;
+                }
+                return false;
+            };
 
-    // --- 全螢幕切換 ---
-    const toggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => console.error(err));
-        } else if (document.exitFullscreen) {
-            document.exitFullscreen();
+            let attempts = 0;
+            const scrollInterval = setInterval(() => {
+                if (scrollAndFocus() || attempts > 20) {
+                    clearInterval(scrollInterval);
+                }
+                attempts++;
+            }, 150);
+
+            return () => clearInterval(scrollInterval);
+        }
+    }, [gameState, selectedChapterNodes, completedLevels.subLevels]);
+
+    // 處理地圖鍵盤導覽
+    const handleMapKeyDown = (e) => {
+        if (gameState !== 'map') return;
+        const focusedElement = document.activeElement;
+        const focusedId = focusedElement?.getAttribute('data-node-id');
+        if (focusedId === null) return;
+        let nextId = parseInt(focusedId, 10);
+        
+        switch (e.key) {
+            case 'ArrowUp':
+            case 'ArrowLeft':
+                nextId = Math.max(0, nextId - 1);
+                break;
+            case 'ArrowDown':
+            case 'ArrowRight':
+                nextId = Math.min(MAP_NODES.length - 1, nextId + 1);
+                break;
+            default:
+                return;
+        }
+
+        const isLocked = !masterUnlock && nextId > 0 && !completedLevels.subLevels.includes(MAP_NODES[nextId - 1].name);
+        if (!isLocked) {
+            const nextNode = document.querySelector(`[data-node-id="${nextId}"]`);
+            nextNode?.focus();
+            nextNode?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     };
+
+    const currentVillain = level === 1 ? VILLAIN_LEVEL_1 : (level === 2 ? VILLAIN_LEVEL_2 : VILLAIN_LEVEL_3);
+
+    // 監聽狀態變化並同步/儲存
+    useEffect(() => {
+        localStorage.setItem('bgmVolume', bgmVolume);
+        localStorage.setItem('sfxVolume', sfxVolume);
+        localStorage.setItem('speechRate', speechRate);
+        localStorage.setItem('questionsPerLevel', questionsPerLevel);
+        localStorage.setItem('globalBattleMode', JSON.stringify(globalBattleMode));
+        localStorage.setItem('googleSheetsUrl', googleSheetsUrl);
+        localStorage.setItem('masterUnlock', JSON.stringify(masterUnlock));
+        localStorage.setItem('customWordSets', JSON.stringify(customWordSets));
+        localStorage.setItem('wordStats', JSON.stringify(wordStats));
+        localStorage.setItem('completedLevels', JSON.stringify(completedLevels));
+        localStorage.setItem('heroSkin', heroSkin);
+
+        if (user) syncToGoogleSheets();
+    }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, googleSheetsUrl, masterUnlock, customWordSets, wordStats, completedLevels, heroSkin, user, syncToGoogleSheets]);
+
+    // 處理音樂播放切換
+    useEffect(() => {
+        if (!audioAllowed) return;
+        if (gameState === 'playing') {
+            if (level === 3) {
+                audioContext.bgm1.pause();
+                audioContext.bgm2.currentTime = 0;
+                audioContext.bgm2.play().catch(e => console.log(e));
+            } else {
+                audioContext.bgm2.pause();
+                audioContext.bgm1.currentTime = 0;
+                audioContext.bgm1.play().catch(e => console.log(e));
+            }
+        } else {
+            audioContext.bgm1.pause();
+            audioContext.bgm2.pause();
+        }
+    }, [gameState, level, audioAllowed, audioContext]);
 
     useEffect(() => {
         const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -1524,13 +1514,13 @@ export default function App() {
                             <div className="flex-1 relative overflow-auto bg-slate-900 bg-center bg-cover flex flex-col items-center py-12 map-responsive-container" style={{ backgroundImage: `url(${selectedWorld.bg})` }}>
                                 <div className={`absolute inset-0 bg-gradient-to-br ${selectedWorld.overlayColor}`}></div>
                                 
-                                <div className="map-scaling-wrapper">
+                                <div className="map-scaling-wrapper flex flex-col items-center">
                                     {/* Top Scroll Roller */}
                                     <div className="relative w-full max-w-[1100px] z-30 px-4">
                                         <div className="scroll-roller mb-[-20px]"></div>
                                     </div>
 
-                                <div className="relative w-full max-w-[1000px] scroll-parchment min-h-[1200px] z-10 mx-auto py-24 px-4 md:px-0">
+                                    <div className="relative w-full max-w-[1000px] scroll-parchment min-h-[1200px] z-10 mx-auto py-24 px-4 md:px-0">
                                     {/* Map Markings (Rich landscape details) */}
                                     <div className="map-marking top-[5%] left-[15%]">🌄</div>
                                     <div className="map-marking top-[12%] right-[20%]">☁️</div>
