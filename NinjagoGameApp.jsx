@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
-const VERSION = "0.1.16";
+const VERSION = "0.1.17";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -560,6 +560,7 @@ export default function App() {
     const syncFromGoogleSheets = (email) => {
         if (!googleSheetsUrl) return;
         fetch(`${googleSheetsUrl}?userEmail=${email}&event=GET_SETTINGS`)
+            .then(res => res.json())
             .then(data => {
                 if (data) {
                     console.log("Sync Data Received:", data);
