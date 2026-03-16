@@ -1705,16 +1705,16 @@ export default function App() {
 
                                                 {/* Player Indicator & Badge (Cleaned up) */}
                                                 {isActive && (
-                                                    <div className="absolute -top-[100px] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none w-[120px]">
-                                                        <div className="w-24 h-24 relative group">
-                                                            <div className="absolute inset-0 bg-yellow-400/40 blur-2xl rounded-full scale-110 animate-aura-pulse"></div>
+                                                    <div className="absolute -top-[120px] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none w-[160px]">
+                                                        <div className="w-32 h-32 relative group">
+                                                            <div className="absolute inset-0 bg-yellow-400/40 blur-3xl rounded-full scale-110 animate-aura-pulse"></div>
                                                             <img 
                                                                 src={CHARACTERS.find(c => c.skin === heroSkin)?.url} 
                                                                 alt="hero" 
-                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_10px_rgba(0,0,0,0.7)] die-cut-medal" 
+                                                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_15px_15px_rgba(0,0,0,0.8)] die-cut-medal" 
                                                             />
                                                         </div>
-                                                        <div className="bg-yellow-400 text-slate-900 px-4 py-1.5 rounded-full font-black text-[10px] shadow-xl border-2 border-slate-900 whitespace-nowrap -mt-4 z-20 animate-bounce uppercase tracking-tighter">
+                                                        <div className="bg-yellow-400 text-slate-900 px-6 py-2 rounded-full font-black text-[12px] shadow-xl border-2 border-slate-900 whitespace-nowrap -mt-8 z-20 animate-bounce uppercase tracking-tighter">
                                                             {statusLabel}
                                                         </div>
                                                     </div>
