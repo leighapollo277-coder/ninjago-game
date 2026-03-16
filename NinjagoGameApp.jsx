@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
-const VERSION = "0.1.23";
+const VERSION = "0.1.24";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -983,12 +983,33 @@ export default function App() {
         // 播放音樂 (Battle Theme Starts Now!)
         audioContext.bgm1.pause();
         audioContext.bgm2.currentTime = 0;
-        audioContext.bgm2.play().catch(e => console.log(                        <div className="flex flex-col items-center gap-6 py-8">
-                            <div id="googleBtn" className="min-h-[50px] flex items-center justify-center"></div>
-                        </div>
-                    </div>
-                </div>
-  return new Promise(resolve => {
+        audioContext.bgm2.play().catch(e => console.log(e));
+
+        setIsLoading(true);
+        setLoadingProgress(0);
+        setGameState('loading');
+
+        const imagesToLoad = [VILLAIN_LEVEL_1.url, VILLAIN_LEVEL_2.url, VILLAIN_LEVEL_3.url, ...CHARACTERS.map(c => c.url)];
+        const audioToLoad = [audioContext.correct, audioContext.wrong, audioContext.bgm2];
+
+        const totalItems = imagesToLoad.length + audioToLoad.length + (words ? words.length : 0);
+        let loadedCount = 0;
+        const tick = () => {
+            loadedCount++;
+            setLoadingProgress(Math.floor((loadedCount / totalItems) * 100));
+        };
+
+        const imgPromises = imagesToLoad.map(src => {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => { tick(); resolve(); };
+                img.onerror = () => { tick(); resolve(); };
+                img.src = src;
+            });
+        });
+
+        const audioPromises = audioToLoad.map(audio => {
+            return new Promise(resolve => {
                 if (audio.readyState >= 3) { tick(); resolve(); }
                 else {
                     audio.addEventListener('canplaythrough', () => { tick(); resolve(); }, { once: true });
