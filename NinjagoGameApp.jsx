@@ -126,26 +126,32 @@ const MAP_WORLDS = [
     }
 ];
 
-// === 產生單一章節地香圖節點 (Zigzag進適單個视區內) ===
-const generateChapterNodes = (levels) => {
+// === 產生單一章節地圖節點 (Zigzag進度，帶有全局索引) ===
+const generateChapterNodes = (levels, worldIdx = 0) => {
     const rowHeight = 220;        // Vertical spacing
-    const startY = 180;           // Top margin
+    const startY = 240;           // Top margin (增高以顯示忍者頭像)
     const centerX = 500;          // Horizontal center
     const amplitude = 180;        // S-curve width
     const frequency = 0.8;        // S-curve tightness
     
+    // 計算該世界在全局等級中的起始位置
+    let baseIdx = 0;
+    for (let i = 0; i < worldIdx; i++) {
+        baseIdx += MAP_WORLDS[i].levels.length;
+    }
+    
     return levels.map((level, idx) => {
         // Winding S-curve: x = center + sin(y * frequency) * amplitude
-        // We use idx as a proxy for the progression along the path
         const x = centerX + Math.sin(idx * frequency) * amplitude;
         const y = startY + idx * rowHeight;
         
-        return { ...level, x, y, id: idx };
+        return { ...level, x, y, id: baseIdx + idx, localId: idx };
     });
 };
 
-// Keep MAP_NODES for backward compat with non-map references
-const MAP_NODES = LEVEL_3_PRESETS.map((preset, idx) => ({ ...preset, id: idx }));
+// 計算所有等級的總數，並建立映射
+const TOTAL_MAP_LEVELS = MAP_WORLDS.reduce((acc, w) => acc + w.levels.length, 0);
+const MAP_NODES = MAP_WORLDS.flatMap((w) => w.levels).map((l, idx) => ({ ...l, id: idx }));
 
 const DEFAULT_MAP_OFFSET = { x: 0, y: 0 };
 
@@ -494,6 +500,7 @@ export default function App() {
     });
 
     const activeNodeRef = useRef(null);
+    const worldScrollRef = useRef(null);
 
     // --- 核心邏輯與語音 ---
     const speak = useCallback((text) => {
@@ -734,6 +741,39 @@ export default function App() {
             audioContext.bgm2.pause();
         }
     }, [gameState, level, audioAllowed, audioContext]);
+
+    // 當進入地圖選擇畫面時，自動滾動到最新解鎖的世界
+    useEffect(() => {
+        if (gameState === 'map' && !selectedWorld && worldScrollRef.current) {
+            // 找出第一個尚未完全通過的世界
+            const nextWorldIdx = MAP_WORLDS.findIndex((world, idx) => {
+                const prevWorld = idx > 0 ? MAP_WORLDS[idx - 1] : null;
+                const isLocked = !masterUnlock && prevWorld && prevWorld.levels.some(l => !completedLevels.subLevels.includes(l.name));
+                const doneLevels = world.levels.filter(l => completedLevels.subLevels.includes(l.name)).length;
+                const isDone = doneLevels === world.levels.length;
+                return !isLocked && !isDone;
+            });
+
+            const targetIdx = nextWorldIdx === -1 ? MAP_WORLDS.length - 1 : nextWorldIdx;
+            
+            setTimeout(() => {
+                const container = worldScrollRef.current;
+                const cards = container.querySelectorAll('.world-card');
+                if (cards[targetIdx]) {
+                    cards[targetIdx].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                }
+            }, 500);
+        }
+    }, [gameState, selectedWorld, completedLevels.subLevels, masterUnlock]);
+
+    // 當選擇世界進入章節地圖後，自動滾動到活動節點 (isActive)
+    useEffect(() => {
+        if (gameState === 'map' && selectedWorld && activeNodeRef.current) {
+            setTimeout(() => {
+                activeNodeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
+    }, [gameState, selectedWorld, selectedChapterNodes]);
 
     useEffect(() => {
         const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -1379,7 +1419,10 @@ export default function App() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-8 pt-10">
+                                <div 
+                                    ref={worldScrollRef}
+                                    className="flex overflow-x-auto gap-8 pt-10 px-4 pb-20 no-scrollbar snap-x"
+                                >
                                     {MAP_WORLDS.map((world, idx) => {
                                         const prevWorld = idx > 0 ? MAP_WORLDS[idx-1] : null;
                                         const isLocked = !masterUnlock && prevWorld && prevWorld.levels.some(l => !completedLevels.subLevels.includes(l.name));
@@ -1387,16 +1430,17 @@ export default function App() {
                                         // 計算世界進度
                                         const totalLevels = world.levels.length;
                                         const doneLevels = world.levels.filter(l => completedLevels.subLevels.includes(l.name)).length;
+                                        const isWorldCompleted = totalLevels > 0 && doneLevels === totalLevels;
                                         const progressPercent = Math.round((doneLevels / totalLevels) * 100);
                                         const hero = CHARACTERS.find(c => c.id === world.heroId) || CHARACTERS[0];
 
                                         return (
                                             <div
                                                 key={world.name}
-                                                className={`group relative flex flex-col rounded-[50px] border-4 transition-all duration-700 overflow-hidden h-[500px] md:h-[600px] shadow-2xl ${
+                                                className={`world-card group relative flex-shrink-0 w-[350px] md:w-[450px] snap-center flex flex-col rounded-[50px] border-4 transition-all duration-700 overflow-hidden h-[500px] md:h-[600px] shadow-2xl ${
                                                     isLocked 
                                                     ? 'bg-slate-900/50 border-slate-800 opacity-60' 
-                                                    : `bg-slate-900/40 ${world.borderColor} hover:scale-[1.05] hover:-translate-y-4 ${world.glowColor} hover:shadow-[0_40px_80px_rgba(0,0,0,0.6)]`
+                                                    : `bg-slate-900/40 ${world.borderColor} hover:scale-[1.02] hover:-translate-y-4 ${world.glowColor} hover:shadow-[0_40px_80px_rgba(0,0,0,0.6)]`
                                                 }`}
                                             >
                                                 {/* 背景圖與動態遮罩 */}
@@ -1590,16 +1634,37 @@ export default function App() {
                                     {/* 繪製關卡點位 */}
                                     {selectedChapterNodes.map((node, idx) => {
                                         const globalIdx = node.id;
-                                        const isLocked = !masterUnlock && globalIdx > 0 && !completedLevels.subLevels.includes(LEVEL_3_PRESETS[globalIdx - 1].name);
+                                        const isLocked = !masterUnlock && globalIdx > 0 && !completedLevels.subLevels.includes(MAP_NODES[globalIdx - 1].name);
                                         const isCompleted = completedLevels.subLevels.includes(node.name);
-                                        const firstUncompletedGlobalIdx = LEVEL_3_PRESETS.findIndex(n => !completedLevels.subLevels.includes(n.name));
-                                        const isActive = globalIdx === (firstUncompletedGlobalIdx === -1 ? LEVEL_3_PRESETS.length - 1 : firstUncompletedGlobalIdx);
+                                        
+                                        // 找出全局下一個未完成的關卡
+                                        const firstUncompletedGlobalIdx = MAP_NODES.findIndex(n => !completedLevels.subLevels.includes(n.name));
+                                        const activeGlobalIdx = firstUncompletedGlobalIdx === -1 ? MAP_NODES.length - 1 : firstUncompletedGlobalIdx;
+                                        
+                                        // 判斷此節點是否為當前焦點 (全域進度)
+                                        const isOverallActive = globalIdx === activeGlobalIdx;
+                                        
+                                        // --- 本地焦點邏輯 (解決 Chapter 2 看不見頭像的問題) ---
+                                        // 如果這章目前包含全域進度，就以全域進度為主
+                                        const chapterHasGlobalActive = selectedChapterNodes.some(n => n.id === activeGlobalIdx);
+                                        
+                                        // 如果這章不包含全域進度，我們要找一個「這章的代表進度」
+                                        // 規則：這章第一個未完成的關卡；如果都完成了，就是最後一個關卡
+                                        const firstUncompletedInChapter = selectedChapterNodes.find(n => !completedLevels.subLevels.includes(n.name));
+                                        const localActiveId = firstUncompletedInChapter ? firstUncompletedInChapter.id : selectedChapterNodes[selectedChapterNodes.length - 1].id;
+                                        
+                                        // 最終 isActive 判斷
+                                        const isActive = chapterHasGlobalActive ? isOverallActive : (globalIdx === localActiveId);
+                                        
+                                        // 標籤顯示：如果是全域進度顯示「當前階段」，否則顯示「由此起步」或「已圓滿」
+                                        const isMastered = selectedChapterNodes.every(n => completedLevels.subLevels.includes(n.name));
+                                        const statusLabel = isOverallActive ? '當前階段' : (isMastered ? '挑戰完成' : '推薦起點');
 
                                         return (
                                             <div
                                                 key={node.name}
                                                 ref={isActive ? activeNodeRef : null}
-                                                className="absolute z-10 transition-all duration-700"
+                                                className="absolute z-10 transition-all duration-700 w-20 h-20"
                                                 style={{ 
                                                     left: `${node.x}px`, 
                                                     top: `${node.y}px`, 
@@ -1608,7 +1673,7 @@ export default function App() {
                                             >
                                                 <div 
                                                     onClick={!isLocked ? () => startSubLevel(node.words, node.name) : undefined}
-                                                    className={`relative group w-20 h-20 flex items-center justify-center transition-all duration-500 shuriken-gold ${
+                                                    className={`relative group w-full h-full flex items-center justify-center transition-all duration-500 shuriken-gold ${
                                                     isLocked 
                                                     ? 'opacity-30 grayscale cursor-not-allowed' 
                                                     : 'cursor-pointer transform hover:scale-110 active:scale-95'
@@ -1636,18 +1701,11 @@ export default function App() {
                                                             </div>
                                                         </div>
                                                     )}
-
-                                                    {/* Level Label */}
-                                                    <div className={`absolute -bottom-7 left-1/2 -translate-x-1/2 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${
-                                                        isActive ? 'text-yellow-500 scale-125 transition-transform' : 'text-slate-950/40'
-                                                    }`}>
-                                                        Study Point {idx + 1}
-                                                    </div>
                                                 </div>
 
                                                 {/* Player Indicator & Badge (Cleaned up) */}
                                                 {isActive && (
-                                                    <div className="absolute -top-[90px] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none">
+                                                    <div className="absolute -top-[100px] left-1/2 -translate-x-1/2 pointer-events-none z-40 flex flex-col items-center select-none w-[120px]">
                                                         <div className="w-24 h-24 relative group">
                                                             <div className="absolute inset-0 bg-yellow-400/40 blur-2xl rounded-full scale-110 animate-aura-pulse"></div>
                                                             <img 
@@ -1657,7 +1715,7 @@ export default function App() {
                                                             />
                                                         </div>
                                                         <div className="bg-yellow-400 text-slate-900 px-4 py-1.5 rounded-full font-black text-[10px] shadow-xl border-2 border-slate-900 whitespace-nowrap -mt-4 z-20 animate-bounce uppercase tracking-tighter">
-                                                            當前階段
+                                                            {statusLabel}
                                                         </div>
                                                     </div>
                                                 )}
