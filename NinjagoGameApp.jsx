@@ -770,8 +770,8 @@ export default function App() {
     useEffect(() => {
         if (gameState === 'map' && selectedWorld && activeNodeRef.current) {
             setTimeout(() => {
-                activeNodeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
+                activeNodeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            }, 500); // 增加延遲以確保 DOM 完全渲染並定位
         }
     }, [gameState, selectedWorld, selectedChapterNodes]);
 
