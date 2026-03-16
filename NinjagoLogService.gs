@@ -78,8 +78,11 @@ function doGet(e) {
     var debug = {
         totalRowsScanned: data.length - 1,
         matchingEmailRows: 0,
-        availableHeaders: headers
+        availableHeaders: headers,
+        matchingRowSamples: [],
+        uniqueEventsFound: []
     };
+    var eventTypes = new Set();
 
     var getCol = function(name) { return headers.indexOf(name); };
     
@@ -96,9 +99,14 @@ function doGet(e) {
         // Match user by email
         if (emailIdx !== -1 && row[emailIdx] === userEmail) {
             debug.matchingEmailRows++;
+            if (debug.matchingRowSamples.length < 5) {
+                debug.matchingRowSamples.push(row);
+            }
             
-            var event = eventIdx !== -1 ? row[eventIdx] : null;
-            var subLevel = subLevelIdx !== -1 ? row[subLevelIdx] : null;
+            var event = eventIdx !== -1 ? String(row[eventIdx]).trim() : null;
+            if (event) eventTypes.add(event);
+            
+            var subLevel = subLevelIdx !== -1 ? String(row[subLevelIdx]).trim() : null;
             var isCorrect = isCorrectIdx !== -1 ? row[isCorrectIdx] : null;
             var settingsStr = settingsIdx !== -1 ? row[settingsIdx] : null;
 
@@ -106,7 +114,7 @@ function doGet(e) {
                 try { lastSettings = JSON.parse(settingsStr); } catch(e) {}
             }
 
-            if (event === "COMPLETION" && subLevel) {
+            if (event === "COMPLETION" && subLevel && subLevel !== "-") {
                 completedSubLevels.add(subLevel.replace('課', '關'));
             }
 
@@ -123,6 +131,8 @@ function doGet(e) {
             }
         }
     }
+
+    debug.uniqueEventsFound = Array.from(eventTypes);
 
     var result = {
         settings: lastSettings ? JSON.stringify(lastSettings) : null,
