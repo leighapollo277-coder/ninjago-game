@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
-const VERSION = "0.1.12";
+const VERSION = "0.1.13";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -1500,7 +1500,7 @@ export default function App() {
                                                             <button 
                                                                 onClick={() => {
                                                                     setSelectedWorld(world);
-                                                                    setSelectedChapterNodes(generateChapterNodes(world.levels));
+                                                                    setSelectedChapterNodes(generateChapterNodes(world.levels, idx));
                                                                     speak(`準備前往，${world.name}！`);
                                                                 }}
                                                                 className="w-full py-5 bg-white text-slate-900 font-black text-lg rounded-3xl shadow-[0_10px_0_rgb(200,200,200)] hover:shadow-none hover:translate-y-1 active:translate-y-2 transition-all duration-100 flex items-center justify-center gap-3 group/btn"
