@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
-const VERSION = "0.1.14";
+const VERSION = "0.1.15";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -776,6 +776,13 @@ export default function App() {
 
         if (user) syncToGoogleSheets();
     }, [bgmVolume, sfxVolume, speechRate, questionsPerLevel, globalBattleMode, googleSheetsUrl, masterUnlock, customWordSets, wordStats, completedLevels, heroSkin, user, syncToGoogleSheets]);
+
+    // 自動同步: 當使用者已登入且有 URL 時同步
+    useEffect(() => {
+        if (user && googleSheetsUrl) {
+            syncFromGoogleSheets(user.email);
+        }
+    }, [googleSheetsUrl]);
 
     // 處理音樂播放切換
     useEffect(() => {
