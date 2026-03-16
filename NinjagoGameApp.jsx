@@ -633,17 +633,38 @@ export default function App() {
     // Google Auth 初始化
     useEffect(() => {
         /* global google */
-        if (typeof google !== 'undefined') {
-            google.accounts.id.initialize({
-                client_id: "977421757055-udocourprogj0595l34kvn2qtd21ejik.apps.googleusercontent.com",
-                callback: handleCredentialResponse
-            });
-            google.accounts.id.renderButton(
-                document.getElementById("googleBtn"),
-                { theme: "outline", size: "large", shape: "pill" }
-            );
-        }
-    }, [gameState]);
+        const initGoogleAuth = () => {
+            if (typeof google !== 'undefined') {
+                google.accounts.id.initialize({
+                    client_id: "977421757055-udocourprogj0595l34kvn2qtd21ejik.apps.googleusercontent.com",
+                    callback: handleCredentialResponse
+                });
+                const btnContainer = document.getElementById("googleBtn");
+                if (btnContainer) {
+                    google.accounts.id.renderButton(
+                        btnContainer,
+                        { theme: "outline", size: "large", shape: "pill" }
+                    );
+                }
+            }
+        };
+
+        // 首次加載嘗試
+        initGoogleAuth();
+
+        // 輪詢直到成功或超時 (處理指令碼延遲加載或 DOM 未就緒)
+        let attempts = 0;
+        const authInterval = setInterval(() => {
+            const btnContainer = document.getElementById("googleBtn");
+            if ((typeof google !== 'undefined' && btnContainer) || attempts > 20) {
+                initGoogleAuth();
+                clearInterval(authInterval);
+            }
+            attempts++;
+        }, 300);
+
+        return () => clearInterval(authInterval);
+    }, [user]); // 僅在使用權變更時重新檢查，或初始掛載時
 
     // 監聽地圖捲動與聚焦
     useEffect(() => {
@@ -899,35 +920,12 @@ export default function App() {
         // 播放音樂 (Battle Theme Starts Now!)
         audioContext.bgm1.pause();
         audioContext.bgm2.currentTime = 0;
-        audioContext.bgm2.play().catch(e => console.log(e));
-
-        // --- Added Asset Preloading ---
-        setIsLoading(true);
-        setLoadingProgress(0);
-
-        const totalToLoad = words.length + CHARACTERS.length + 5;
-        let loaded = 0;
-        const tick = () => {
-            loaded++;
-            setLoadingProgress(Math.min(99, Math.floor((loaded / totalToLoad) * 100)));
-        };
-
-        // 1. Preload Images
-        const imagePaths = ['/assets/home_bg.png', ...CHARACTERS.map(c => c.url)];
-        const imgPromises = imagePaths.map(path => {
-            return new Promise(resolve => {
-                const img = new Image();
-                img.src = path;
-                img.onload = () => { tick(); resolve(); };
-                img.onerror = () => { tick(); resolve(); };
-            });
-        });
-
-        // 2. Preload Audio
-        const audioPromises = [
-            audioContext.bgm1, audioContext.bgm2, audioContext.correct, audioContext.wrong
-        ].map(audio => {
-            return new Promise(resolve => {
+        audioContext.bgm2.play().catch(e => console.log(                        <div className="flex flex-col items-center gap-6 py-8">
+                            <div id="googleBtn" className="min-h-[50px] flex items-center justify-center"></div>
+                        </div>
+                    </div>
+                </div>
+  return new Promise(resolve => {
                 if (audio.readyState >= 3) { tick(); resolve(); }
                 else {
                     audio.addEventListener('canplaythrough', () => { tick(); resolve(); }, { once: true });
