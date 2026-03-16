@@ -1106,18 +1106,7 @@ export default function App() {
                         </div>
                         
                         <div className="flex flex-col items-center gap-6 py-8">
-                            <div id="googleBtn"></div>
-                        </div>
-
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left space-y-3">
-                            <h3 className="text-yellow-400 font-bold flex items-center gap-2">
-                                <Settings className="w-4 h-4" /> 設定提示 (設定一次即可)
-                            </h3>
-                            <p className="text-xs text-slate-400 leading-relaxed">
-                                1. 請確保你在 Google Cloud 控制台已建立 <b>OAuth 2.0 Client ID</b>。<br/>
-                                2. 將 <code>https://ninjago-game.vercel.app</code> 加入授權來源。<br/>
-                                3. 更新程式碼中的 <code>client_id</code> 即可解決 "Invalid Client" 錯誤。
-                            </p>
+                            <div id="googleBtn" className="min-h-[50px] flex items-center justify-center"></div>
                         </div>
                     </div>
                 </div>
