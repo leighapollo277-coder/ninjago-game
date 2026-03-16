@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
-const VERSION = "0.1.17";
+const VERSION = "0.1.18";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -606,6 +606,9 @@ export default function App() {
                                 isFromCloud: true
                             });
                         }
+                    }
+                    if (data.debugInfo) {
+                        console.log("Sync Debug Diagnostics:", data.debugInfo);
                     }
                 } else {
                     console.log("No data returned from sync.");
