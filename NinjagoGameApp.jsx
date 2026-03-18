@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const VERSION = "0.1.25";
-const UPDATE_TIME = "2026-03-18 21:43 HKT";
+const VERSION = "0.1.26";
+const UPDATE_TIME = "2026-03-18 21:52 HKT";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -683,6 +683,20 @@ export default function App() {
         };
 
         const userObj = parseJwt(response.credential);
+        
+        // --- Identity Fix: Reset state if the user has changed ---
+        if (user && user.email !== userObj.email) {
+            console.log("[Identity] User switched detected. Resetting local progress.");
+            setCompletedLevels({ subLevels: [] });
+            setWordStats({});
+            setCustomWordSets([]);
+            setMasterUnlock(false);
+            setHeroSkin('kai');
+            setScore(0);
+            setHeroEnergy(100);
+            localStorage.removeItem('ninjago_active_session');
+        }
+
         setUser(userObj);
         localStorage.setItem('ninjago_user', JSON.stringify(userObj));
         // Sync data from sheet after login
@@ -2504,6 +2518,13 @@ export default function App() {
                             >
                                 重新開始
                             </button>
+                            <button 
+                                onClick={() => setResumeSessionData(null)}
+                                className="w-full py-4 text-slate-500 hover:text-white transition-colors font-bold text-sm"
+                            >
+                                暫時跳過 (Skip for now)
+                            </button>
+
                         </div>
                     </div>
                 </div>
