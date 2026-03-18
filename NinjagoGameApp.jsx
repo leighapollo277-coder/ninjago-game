@@ -1600,8 +1600,8 @@ export default function App() {
                                         如果裝置未下載「Sin-ji (廣東話)」語音，將無法發聲：
                                     </p>
                                     <div className="bg-slate-800/80 p-4 rounded-3xl border border-white/5 space-y-2">
-                                        <p className="text-xs text-yellow-400 font-mono">1. 設定 > 輔助使用 > 朗讀內容</p>
-                                        <p className="text-xs text-yellow-400 font-mono">2. 語音 > 中文 > 廣東話 (香港)</p>
+                                        <p className="text-xs text-yellow-400 font-mono">1. 設定 &gt; 輔助使用 &gt; 朗讀內容</p>
+                                        <p className="text-xs text-yellow-400 font-mono">2. 語音 &gt; 中文 &gt; 廣東話 (香港)</p>
                                         <p className="text-xs text-yellow-400 font-mono">3. 點擊「雲端 ☁️」圖示進行下載</p>
                                     </div>
                                 </div>
