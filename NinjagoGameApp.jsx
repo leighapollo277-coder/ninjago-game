@@ -506,39 +506,54 @@ export default function App() {
     const worldScrollRef = useRef(null);
 
     // --- 核心邏輯與語音 ---
-    const speak = useCallback((text) => {
+    const checkTtsAvailability = useCallback(() => {
+        if (!('speechSynthesis' in window)) {
+            setTtsDiagnosticStatus('unsupported');
+            return;
+        }
+
+        const voices = window.speechSynthesis.getVoices();
+        const hasHk = voices.some(v => v.lang.includes('HK') || v.lang.includes('zh-HK'));
+        
+        if (voices.length > 0 && !hasHk) {
+            setTtsDiagnosticStatus('missing-voice');
+        } else if (voices.length > 0) {
+            setTtsDiagnosticStatus('ok');
+        }
+    }, []);
+
+    useEffect(() => {
+        checkTtsAvailability();
         if ('speechSynthesis' in window) {
-            // iOS optimization: Removing .cancel() can sometimes help with stuttering/silence on certain versions
-            // window.speechSynthesis.cancel();
+            window.speechSynthesis.onvoiceschanged = checkTtsAvailability;
+        }
+    }, [checkTtsAvailability]);
+
+    const speak = useCallback((text, onEnd) => {
+        if ('speechSynthesis' in window) {
+            // iOS optimization: Avoid .cancel() if possible, but keep it for queue clearing
+            window.speechSynthesis.cancel();
             
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-HK';
             utterance.rate = speechRate;
             
+            if (onEnd) utterance.onend = onEnd;
+
+            // Detection for Mute: If it doesn't start in 1000ms, it might be muted by system
+            const muteTimer = setTimeout(() => {
+                if (window.speechSynthesis.speaking && ttsDiagnosticStatus === 'ok') {
+                    // It "thinks" it's speaking but no sound? Likely system mute.
+                    // This is a heuristic only.
+                }
+            }, 1000);
+
+            utterance.onstart = () => clearTimeout(muteTimer);
+            
             console.log(`[TTS] Speaking: ${text} | Lang: ${utterance.lang}`);
             window.speechSynthesis.speak(utterance);
         }
-    }, [speechRate]);
-
-    // Diagnostic: List available voices in the console on mount
-    useEffect(() => {
-        const listVoices = () => {
-            if ('speechSynthesis' in window) {
-                const voices = window.speechSynthesis.getVoices();
-                console.log("[TTS] Available Voices:", voices.map(v => `${v.name} (${v.lang})`));
-                const hkVoice = voices.find(v => v.lang.includes('HK') || v.lang.includes('zh-HK'));
-                if (hkVoice) {
-                    console.log("[TTS] Found HK-Cantonese Voice:", hkVoice.name);
-                } else {
-                    console.warn("[TTS] No HK-Cantonese Voice found on this device.");
-                }
-            }
-        };
-        listVoices();
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = listVoices;
-        }
-    }, []);
+    }, [speechRate, ttsDiagnosticStatus]);
 
     // --- 同步與紀錄系統 ---
     const syncToGoogleSheets = useCallback(() => {
