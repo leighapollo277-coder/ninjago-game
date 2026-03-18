@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const VERSION = "0.1.30";
-const UPDATE_TIME = "2026-03-18 22:32 HKT";
+const VERSION = "0.1.31";
+const UPDATE_TIME = "2026-03-18 22:35 HKT";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -1035,9 +1035,14 @@ export default function App() {
             const savedSession = localStorage.getItem('ninjago_active_session');
             if (savedSession) {
                 const sessionData = JSON.parse(savedSession);
-                if (sessionData.subName === subName) {
-                    setResumeSessionData({ words, subName, sessionData });
+                // Guard: Only show resume if session belongs to current user
+                if (sessionData.subName === subName && sessionData.userEmail === user?.email) {
+                    setResumeSessionData({ words, subName, sessionData, email: user?.email });
                     return; // 顯示 Resume 對話框
+                } else if (sessionData.userEmail !== user?.email) {
+                    // Wrong user's session - silently discard it
+                    console.log("[Session] Discarding stale session from", sessionData.userEmail, "(current user:", user?.email, ")");
+                    localStorage.removeItem('ninjago_active_session');
                 }
             }
         }
@@ -1186,6 +1191,7 @@ export default function App() {
 
             // --- 保存進度 ---
             const sessionData = {
+                userEmail: user?.email, // Tag session with user identity
                 subName: selectedSubLevel,
                 remaining: sessionRemainingWords,
                 score: score + 1,
@@ -1230,8 +1236,9 @@ export default function App() {
 
             // --- 保存進度 (即使答錯也要存，因為能量可能扣減) ---
             const sessionData = {
+                userEmail: user?.email, // Tag session with user identity
                 subName: selectedSubLevel,
-                remaining: [currentQuestion.target, ...sessionRemainingWords], // 把剛剛答錯的字插回去 (或是維持原樣，看您希望答錯是否要重考)
+                remaining: [currentQuestion.target, ...sessionRemainingWords],
                 score: score,
                 target: targetScore,
                 energy: Math.max(0, heroEnergy - 10)
