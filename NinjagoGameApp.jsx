@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const VERSION = "0.1.29";
-const UPDATE_TIME = "2026-03-18 22:26 HKT";
+const VERSION = "0.1.30";
+const UPDATE_TIME = "2026-03-18 22:32 HKT";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -651,6 +651,7 @@ export default function App() {
                         if (!localSession || data.cloudSession.score > localSession.score) {
                             console.log("Suggesting cloud session restore over local:", localSession);
                             setResumeSessionData({
+                                email: email, // Store the email this session belongs to
                                 words: data.cloudSession.words,
                                 subName: data.cloudSession.subName,
                                 sessionData: {
@@ -2533,6 +2534,9 @@ export default function App() {
                             <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">
                                 偵測到{resumeSessionData.isFromCloud ? '雲端' : '本地'}存檔！
                             </h2>
+                            <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5 inline-block mx-auto">
+                                <p className="text-yellow-400 text-xs font-mono">{resumeSessionData.email || '本地用戶'}</p>
+                            </div>
                             <p className="text-slate-400 font-bold leading-relaxed">
                                 您在 <span className="text-yellow-400">{resumeSessionData.subName}</span> 還有尚未完成的任務。<br/>
                                 目前進度：{resumeSessionData.sessionData.score} / {resumeSessionData.sessionData.target}
