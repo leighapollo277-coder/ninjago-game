@@ -2,6 +2,7 @@ import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 import pkg from './package.json';
 const VERSION = "0.1.24";
+const UPDATE_TIME = "2026-03-18 20:28 HKT";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -1456,7 +1457,7 @@ export default function App() {
                                 旋風忍者：冒險之旅
                             </div>
                             <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                VER {VERSION}
+                                VER {VERSION} | UPDATED {UPDATE_TIME}
                             </div>
                         </div>
 
