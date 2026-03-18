@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const VERSION = "0.1.32";
-const UPDATE_TIME = "2026-03-18 22:42 HKT";
+const VERSION = "0.1.33";
+const UPDATE_TIME = "2026-03-18 22:46 HKT";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -644,30 +644,26 @@ export default function App() {
                     }
 
                     // 3. Handle Cloud Session (Partial Progress)
-                    if (data.cloudSession) {
+                    if (data.cloudSession && !skipCloudSession) {
                         console.log("Cloud session found:", data.cloudSession);
-                        // GUARD: Only restore cloud session if it belongs to the current user
-                        if (data.cloudSession.email && data.cloudSession.email !== email) {
-                            console.log("[Sync] Ignoring cloud session from different user:", data.cloudSession.email, "!=", email);
-                        } else {
-                            const localSession = JSON.parse(localStorage.getItem('ninjago_active_session'));
-                            // If cloud has a session and local doesn't or cloud has more score, suggest cloud
-                            if (!localSession || data.cloudSession.score > localSession.score) {
-                                console.log("Suggesting cloud session restore over local:", localSession);
-                                setResumeSessionData({
-                                    email: email,
-                                    words: data.cloudSession.words,
-                                    subName: data.cloudSession.subName,
-                                    sessionData: {
-                                        score: data.cloudSession.score,
-                                        target: 100,
-                                        energy: 100,
-                                        remaining: []
-                                    },
-                                    isFromCloud: true
-                                });
-                            }
+                        const localSession = JSON.parse(localStorage.getItem('ninjago_active_session'));
+                        if (!localSession || data.cloudSession.score > localSession.score) {
+                            console.log("Suggesting cloud session restore:", data.cloudSession);
+                            setResumeSessionData({
+                                email: email,
+                                words: data.cloudSession.words,
+                                subName: data.cloudSession.subName,
+                                sessionData: {
+                                    score: data.cloudSession.score,
+                                    target: 100,
+                                    energy: 100,
+                                    remaining: []
+                                },
+                                isFromCloud: true
+                            });
                         }
+                    } else if (data.cloudSession && skipCloudSession) {
+                        console.log("[Sync] Skipping cloud session restore during login (fresh start enforced).");
                     }
                     if (data.debugInfo) {
                         console.log("Sync Debug Diagnostics:", data.debugInfo);
@@ -727,8 +723,8 @@ export default function App() {
 
         setUser(userObj);
         localStorage.setItem('ninjago_user', JSON.stringify(userObj));
-        // Sync data from sheet after login - will now overwrite the empty states above
-        syncFromGoogleSheets(userObj.email);
+        // Sync data from sheet after login - skipCloudSession=true to prevent stale popup
+        syncFromGoogleSheets(userObj.email, true);
     };
 
     // --- 全螢幕與介面輔助 ---
