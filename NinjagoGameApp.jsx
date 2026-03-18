@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const VERSION = "0.1.28";
-const UPDATE_TIME = "2026-03-18 22:15 HKT";
+const VERSION = "0.1.29";
+const UPDATE_TIME = "2026-03-18 22:26 HKT";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -636,10 +636,10 @@ export default function App() {
 
                     // 2. Apply Reconstructed Progress (Scanned from logs)
                     if (data.reconstructedStatus && data.reconstructedStatus.subLevels) {
-                        console.log("Applying reconstructed levels:", data.reconstructedStatus.subLevels);
-                        setCompletedLevels(prev => {
-                            const merged = new Set([...prev.subLevels, ...data.reconstructedStatus.subLevels]);
-                            return { ...prev, subLevels: Array.from(merged) };
+                        console.log("[Sync] Overwriting with fresh reconstructed progress:", data.reconstructedStatus.subLevels);
+                        // Force calculation: Always discard PREVIOUS local state and use strictly RECONSTRUCTED data
+                        setCompletedLevels({ 
+                            subLevels: [...data.reconstructedStatus.subLevels] 
                         });
                     }
 
@@ -705,29 +705,26 @@ export default function App() {
         const userObj = parseJwt(response.credential);
         const savedUser = JSON.parse(localStorage.getItem('ninjago_user'));
         
-        // --- Identity Fix: Always clear if there's a mismatch or a fresh login ---
-        if (!savedUser || savedUser.email !== userObj.email) {
-            console.log("[Identity] Identity change detected (", savedUser?.email, "->", userObj.email, "). Clearing local storage.");
-            
-            // Clear progress-related storage but maybe keep settings?
-            // To be safest, we clear the main items
-            const keysToClear = ['completedLevels', 'wordStats', 'customWordSets', 'masterUnlock', 'ninjago_active_session'];
-            keysToClear.forEach(k => localStorage.removeItem(k));
-            
-            // Reset states
-            setCompletedLevels({ subLevels: [] });
-            setWordStats({});
-            setCustomWordSets([]);
-            setMasterUnlock(false);
-            setHeroSkin('kai');
-            setScore(0);
-            setHeroEnergy(100);
-            setResumeSessionData(null);
-        }
+        // --- Identity Fix: Aggressive wipe on any login to ensure fresh calculation ---
+        console.log("[Identity] Login detected. Performing aggressive state reset to force fresh progress calculation.");
+        
+        // Clear progress-related storage
+        const keysToClear = ['completedLevels', 'wordStats', 'customWordSets', 'masterUnlock', 'ninjago_active_session'];
+        keysToClear.forEach(k => localStorage.removeItem(k));
+        
+        // Reset states to empty defaults so they MUST be re-populated by sync
+        setCompletedLevels({ subLevels: [] });
+        setWordStats({});
+        setCustomWordSets([]);
+        setMasterUnlock(false);
+        setHeroSkin('kai');
+        setScore(0);
+        setHeroEnergy(100);
+        setResumeSessionData(null);
 
         setUser(userObj);
         localStorage.setItem('ninjago_user', JSON.stringify(userObj));
-        // Sync data from sheet after login
+        // Sync data from sheet after login - will now overwrite the empty states above
         syncFromGoogleSheets(userObj.email);
     };
 
