@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const VERSION = "0.1.27";
-const UPDATE_TIME = "2026-03-18 22:05 HKT";
+const VERSION = "0.1.28";
+const UPDATE_TIME = "2026-03-18 22:15 HKT";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -1505,16 +1505,21 @@ export default function App() {
                     {/* User Profile (If logged in) */}
                     <div className="z-20 flex flex-col items-center gap-4">
                         {user && (
-                            <div className="flex items-center gap-4 bg-white/10 p-3 rounded-full border border-white/20">
+                            <div className="flex items-center gap-4 bg-white/10 p-3 pl-4 pr-6 rounded-full border border-white/20 backdrop-blur-md shadow-2xl">
                                 <img src={user.picture} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400" />
                                 <div className="text-left">
                                     <p className="text-white font-bold leading-none">{user.name}</p>
-                                    <p className="text-yellow-400 text-xs">{user.email}</p>
+                                    <p className="text-yellow-400 text-[10px] opacity-70">{user.email}</p>
                                 </div>
-                                <button onClick={() => {
-                                    setUser(null);
-                                    localStorage.removeItem('ninjago_user');
-                                }} className="ml-2 text-white/50 hover:text-white"><X className="w-5 h-5"/></button>
+                                <div className="h-8 w-px bg-white/10 mx-2"></div>
+                                <button 
+                                    onClick={logout} 
+                                    className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors font-black text-xs uppercase tracking-tighter"
+                                    title="Sign Out & Clear All Data"
+                                >
+                                    <XCircle className="w-5 h-5" />
+                                    登出 (LOGOUT)
+                                </button>
                             </div>
                         )}
                     </div>
