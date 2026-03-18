@@ -476,6 +476,10 @@ export default function App() {
     });
     const [customWordSets, setCustomWordSets] = useState(() => JSON.parse(localStorage.getItem('customWordSets')) || []);
     const [wordStats, setWordStats] = useState(() => JSON.parse(localStorage.getItem('wordStats')) || {});
+    
+    // TTS Diagnostic State
+    const [showTtsDiagnostic, setShowTtsDiagnostic] = useState(false);
+    const [ttsDiagnosticStatus, setTtsDiagnosticStatus] = useState('unknown'); // 'unknown', 'missing-voice', 'muted', 'ok'
     const [selectedSubLevel, setSelectedSubLevel] = useState('all'); // lesson name or set id or 'all'
     const [currentWordPool, setCurrentWordPool] = useState(WORDS_LEVEL_1_2);
     const [sessionRemainingWords, setSessionRemainingWords] = useState([]);
@@ -1508,20 +1512,119 @@ export default function App() {
                             </button>
                             
                             {/* Diagnostic Tool: Manual Test Voice Button */}
-                            <button
-                                onClick={() => {
-                                    if (!audioAllowed) setAudioAllowed(true);
-                                    speak('測試語音成功！聽唔聽到我講嘢呀？');
-                                }}
-                                className="mt-4 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 transition flex items-center gap-2 text-sm font-bold"
-                            >
-                                <Volume2 className="w-5 h-5 text-yellow-500" />
-                                🔊 測試語音 (TEST VOICE)
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => {
+                                        if (!audioAllowed) setAudioAllowed(true);
+                                        speak('測試語音成功！聽唔聽到我講嘢呀？');
+                                    }}
+                                    className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 transition flex items-center gap-2 text-sm font-bold"
+                                >
+                                    <Volume2 className="w-5 h-5 text-yellow-500" />
+                                    🔊 測試語音 (TEST VOICE)
+                                </button>
+                                <button
+                                    onClick={() => setShowTtsDiagnostic(true)}
+                                    className="p-3 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-2xl border border-blue-500/30 transition shadow-lg"
+                                    title="Voice Help"
+                                >
+                                    <Info className="w-6 h-6" />
+                                </button>
+                            </div>
                             
+                            {ttsDiagnosticStatus === 'missing-voice' && (
+                                <div className="bg-red-500/20 border border-red-500/50 p-3 rounded-xl flex items-center gap-3 animate-bounce">
+                                    <XCircle className="w-5 h-5 text-red-400" />
+                                    <span className="text-red-100 text-xs font-bold">偵測到裝置尚未安裝廣東話語音！</span>
+                                    <button onClick={() => setShowTtsDiagnostic(true)} className="underline text-red-200 text-xs">查看教學</button>
+                                </div>
+                            )}
+
                             <p className="text-slate-400 font-bold tracking-widest animate-pulse mt-4">
                                 — 點擊開始你的忍者修煉之路 —
                             </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===================== TTS Diagnostic Modal (Master Tutor) ===================== */}
+            {showTtsDiagnostic && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+                    <div className="bg-slate-900 w-full max-w-2xl rounded-[40px] border-4 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.3)] overflow-hidden flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="bg-yellow-500 p-6 flex justify-between items-center bg-gradient-to-r from-yellow-400 to-amber-600">
+                            <div className="flex items-center gap-4">
+                                <div className="bg-slate-900 p-2 rounded-2xl">
+                                    <Volume2 className="w-8 h-8 text-yellow-400" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-900 italic">NINJA VOICE TUTOR</h2>
+                                    <p className="text-xs font-bold text-slate-900/70 tracking-tighter uppercase">廣東話語音診斷助手</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowTtsDiagnostic(false)} className="bg-slate-900/20 hover:bg-slate-900/40 p-2 rounded-full transition">
+                                <X className="w-8 h-8 text-slate-900" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-8 overflow-y-auto space-y-8 flex-1 custom-scrollbar">
+                            {/* Step 1: Silent Mode */}
+                            <div className="flex gap-6">
+                                <div className="flex-shrink-0 w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center font-black text-2xl text-yellow-500 border border-white/10">1</div>
+                                <div className="space-y-3">
+                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                        檢查靜音開關 (Silent Mode)
+                                    </h3>
+                                    <p className="text-slate-400 text-sm leading-relaxed">
+                                        iPad 側面或控制中心嘅「鈴聲」圖示如果係<span className="text-red-400 font-bold">紅色</span>，網頁語音將會被禁音。請確保關閉靜音模式。
+                                    </p>
+                                    <div className="bg-slate-800/50 p-4 rounded-3xl border border-white/5 flex items-center gap-4">
+                                        <div className="bg-red-500 p-2 rounded-lg animate-pulse">
+                                            <Volume2 className="w-6 h-6 text-white" />
+                                        </div>
+                                        <span className="text-slate-300 text-xs">➔ 打開控制中心，點擊「鐘仔」圖示使其變為灰色。</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Step 2: Voice Download */}
+                            <div className="flex gap-6">
+                                <div className="flex-shrink-0 w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center font-black text-2xl text-yellow-500 border border-white/10">2</div>
+                                <div className="space-y-3">
+                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                        安裝廣東話語音 (Install Voice)
+                                    </h3>
+                                    <p className="text-slate-400 text-sm leading-relaxed">
+                                        如果裝置未下載「Sin-ji (廣東話)」語音，將無法發聲：
+                                    </p>
+                                    <div className="bg-slate-800/80 p-4 rounded-3xl border border-white/5 space-y-2">
+                                        <p className="text-xs text-yellow-400 font-mono">1. 設定 > 輔助使用 > 朗讀內容</p>
+                                        <p className="text-xs text-yellow-400 font-mono">2. 語音 > 中文 > 廣東話 (香港)</p>
+                                        <p className="text-xs text-yellow-400 font-mono">3. 點擊「雲端 ☁️」圖示進行下載</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Status Footer */}
+                            <div className="bg-slate-950/50 p-6 rounded-[32px] border border-white/5 text-center space-y-4">
+                                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">目前診斷狀態</p>
+                                <div className="flex justify-center gap-4">
+                                    <div className={`px-4 py-2 rounded-full text-xs font-black uppercase ${ttsDiagnosticStatus === 'ok' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                        VOICE: {ttsDiagnosticStatus === 'missing-voice' ? 'MISSING' : (ttsDiagnosticStatus === 'unsupported' ? 'INCOMPATIBLE' : 'OK')}
+                                    </div>
+                                    <div className="px-4 py-2 rounded-full bg-white/5 text-slate-400 text-xs font-black uppercase">
+                                        ENGINE: READY
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => speak('恭喜！你已經成功解鎖語音系統。')}
+                                    className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black rounded-2xl transition shadow-xl active:scale-95"
+                                >
+                                    即刻測試 (TEST NOW)
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
