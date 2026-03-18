@@ -165,6 +165,7 @@ function doGet(e) {
 
     if (latestSubLevel && !completedSubLevels.has(latestSubLevel)) {
         result.cloudSession = {
+            email: targetEmail, // Include user email for identity verification
             subName: latestSubLevel,
             score: latestCorrectCount,
             words: latestWords,
