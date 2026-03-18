@@ -508,21 +508,37 @@ export default function App() {
     // --- 核心邏輯與語音 ---
     const speak = useCallback((text) => {
         if ('speechSynthesis' in window) {
-            // iOS fix: Cancel any pending speech before starting new one
-            window.speechSynthesis.cancel();
+            // iOS optimization: Removing .cancel() can sometimes help with stuttering/silence on certain versions
+            // window.speechSynthesis.cancel();
             
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-HK';
             utterance.rate = speechRate;
             
-            // Log for debugging
-            console.log(`[TTS] Speaking: ${text}`);
-            
+            console.log(`[TTS] Speaking: ${text} | Lang: ${utterance.lang}`);
             window.speechSynthesis.speak(utterance);
-        } else {
-            console.warn("[TTS] Speech Synthesis not supported in this browser.");
         }
     }, [speechRate]);
+
+    // Diagnostic: List available voices in the console on mount
+    useEffect(() => {
+        const listVoices = () => {
+            if ('speechSynthesis' in window) {
+                const voices = window.speechSynthesis.getVoices();
+                console.log("[TTS] Available Voices:", voices.map(v => `${v.name} (${v.lang})`));
+                const hkVoice = voices.find(v => v.lang.includes('HK') || v.lang.includes('zh-HK'));
+                if (hkVoice) {
+                    console.log("[TTS] Found HK-Cantonese Voice:", hkVoice.name);
+                } else {
+                    console.warn("[TTS] No HK-Cantonese Voice found on this device.");
+                }
+            }
+        };
+        listVoices();
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = listVoices;
+        }
+    }, []);
 
     // --- 同步與紀錄系統 ---
     const syncToGoogleSheets = useCallback(() => {
@@ -1474,6 +1490,18 @@ export default function App() {
                                     <span className="text-5xl font-black text-slate-900 uppercase">START</span>
                                 </div>
                                 <div className="absolute -inset-1 bg-yellow-400 blur opacity-20 group-hover:opacity-40 transition-opacity rounded-[32px]"></div>
+                            </button>
+                            
+                            {/* Diagnostic Tool: Manual Test Voice Button */}
+                            <button
+                                onClick={() => {
+                                    if (!audioAllowed) setAudioAllowed(true);
+                                    speak('測試語音成功！聽唔聽到我講嘢呀？');
+                                }}
+                                className="mt-4 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 transition flex items-center gap-2 text-sm font-bold"
+                            >
+                                <Volume2 className="w-5 h-5 text-yellow-500" />
+                                🔊 測試語音 (TEST VOICE)
                             </button>
                             
                             <p className="text-slate-400 font-bold tracking-widest animate-pulse mt-4">
