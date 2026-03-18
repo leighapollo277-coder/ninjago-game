@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const VERSION = "0.1.26";
-const UPDATE_TIME = "2026-03-18 21:52 HKT";
+const VERSION = "0.1.27";
+const UPDATE_TIME = "2026-03-18 22:05 HKT";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
@@ -672,6 +672,26 @@ export default function App() {
             }).catch(e => console.log("Fetch settings failed", e));
     };
 
+    const logout = useCallback(() => {
+        console.log("[Identity] Logging out and clearing all local data.");
+        localStorage.clear(); // Nuclear option for maximum safety
+        
+        // Reset all states to defaults
+        setUser(null);
+        setCompletedLevels({ subLevels: [] });
+        setWordStats({});
+        setCustomWordSets([]);
+        setMasterUnlock(false);
+        setHeroSkin('kai');
+        setScore(0);
+        setHeroEnergy(100);
+        setGameState('start');
+        setResumeSessionData(null);
+        
+        // Optional: Trigger a page reload to ensure a clean slate if needed
+        // window.location.reload();
+    }, []);
+
     const handleCredentialResponse = (response) => {
         const parseJwt = (token) => {
             const base64Url = token.split('.')[1];
@@ -683,10 +703,18 @@ export default function App() {
         };
 
         const userObj = parseJwt(response.credential);
+        const savedUser = JSON.parse(localStorage.getItem('ninjago_user'));
         
-        // --- Identity Fix: Reset state if the user has changed ---
-        if (user && user.email !== userObj.email) {
-            console.log("[Identity] User switched detected. Resetting local progress.");
+        // --- Identity Fix: Always clear if there's a mismatch or a fresh login ---
+        if (!savedUser || savedUser.email !== userObj.email) {
+            console.log("[Identity] Identity change detected (", savedUser?.email, "->", userObj.email, "). Clearing local storage.");
+            
+            // Clear progress-related storage but maybe keep settings?
+            // To be safest, we clear the main items
+            const keysToClear = ['completedLevels', 'wordStats', 'customWordSets', 'masterUnlock', 'ninjago_active_session'];
+            keysToClear.forEach(k => localStorage.removeItem(k));
+            
+            // Reset states
             setCompletedLevels({ subLevels: [] });
             setWordStats({});
             setCustomWordSets([]);
@@ -694,7 +722,7 @@ export default function App() {
             setHeroSkin('kai');
             setScore(0);
             setHeroEnergy(100);
-            localStorage.removeItem('ninjago_active_session');
+            setResumeSessionData(null);
         }
 
         setUser(userObj);
@@ -1255,6 +1283,14 @@ export default function App() {
                         
                         <div className="flex flex-col items-center gap-6 py-8">
                             <div id="googleBtn" className="min-h-[50px] flex items-center justify-center"></div>
+                            {user && (
+                                <button 
+                                    onClick={logout}
+                                    className="text-slate-500 hover:text-red-400 text-xs font-bold uppercase tracking-tight transition-colors underline decoration-dotted"
+                                >
+                                    Log Out ({user.email})
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
