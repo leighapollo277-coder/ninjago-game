@@ -507,11 +507,19 @@ export default function App() {
     // --- 核心邏輯與語音 ---
     const speak = useCallback((text) => {
         if ('speechSynthesis' in window) {
+            // iOS fix: Cancel any pending speech before starting new one
             window.speechSynthesis.cancel();
+            
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-HK';
             utterance.rate = speechRate;
+            
+            // Log for debugging
+            console.log(`[TTS] Speaking: ${text}`);
+            
             window.speechSynthesis.speak(utterance);
+        } else {
+            console.warn("[TTS] Speech Synthesis not supported in this browser.");
         }
     }, [speechRate]);
 
@@ -1395,6 +1403,13 @@ export default function App() {
                             setAudioAllowed(true);
                             audioContext.bgm1.currentTime = 0;
                             audioContext.bgm1.play().catch(e => console.log(e));
+                            
+                            // iOS/iPadOS TTS priming: "speak" an empty string on first click
+                            if ('speechSynthesis' in window) {
+                                const u = new SpeechSynthesisUtterance('');
+                                window.speechSynthesis.speak(u);
+                                console.log("[TTS] Engine primed on first click.");
+                            }
                         }
                     }}
                 >
