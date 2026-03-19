@@ -3,7 +3,7 @@ const { useState, useEffect, useCallback, useRef, useMemo } = React;
 const VERSION = "0.1.34";
 const UPDATE_TIME = "2026-03-18 22:52 HKT";
 
-import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
+import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock, TrendingUp, Search, ChevronDown, HelpCircle, User, Calendar, Clock, Award } from 'lucide-react';
 
 // === 資料與常數準備 ===
 const CHARACTERS = [
@@ -437,6 +437,477 @@ const Particles = () => {
     );
 };
 
+// === 元件：儀表板 (Dashboard) ===
+const NinjagoDashboard = ({ user, googleSheetsUrl, onClose }) => {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [filter, setFilter] = useState(10); // Top X incorrect words
+    const [wordListModal, setWordListModal] = useState(null); // { title: string, words: string[] }
+    const [expandedLevel, setExpandedLevel] = useState(null); // level name
+
+    useEffect(() => {
+        if (!user || !googleSheetsUrl) return;
+        setLoading(true);
+        fetch(`${googleSheetsUrl}?userEmail=${user.email}&event=GET_DASHBOARD`)
+            .then(res => res.json())
+            .then(json => {
+                if (json.result === "error") throw new Error(json.message);
+                setData(json);
+            })
+            .catch(err => setError(err.message))
+            .finally(() => setLoading(false));
+    }, [user, googleSheetsUrl]);
+
+    if (loading) return (
+        <div className="fixed inset-0 z-[250] bg-slate-900/90 backdrop-blur-xl flex flex-col items-center justify-center text-white">
+            <div className="w-20 h-20 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-xl font-bold animate-pulse">正在召喚數據忍者...</p>
+        </div>
+    );
+
+    if (error) return (
+        <div className="fixed inset-0 z-[250] bg-slate-900/90 backdrop-blur-xl flex flex-col items-center justify-center text-white p-6">
+            <XCircle className="w-20 h-20 text-red-500 mb-4" />
+            <p className="text-xl font-bold mb-4">讀取失敗: {error}</p>
+            <button onClick={onClose} className="px-8 py-3 bg-slate-700 rounded-full font-bold">返回</button>
+        </div>
+    );
+
+    const wordAnalysis = data?.wordAnalysis || [];
+    const topIncorrect = [...wordAnalysis]
+        .filter(w => w.incorrect > 0)
+        .sort((a, b) => b.incorrect - a.incorrect)
+        .slice(0, filter);
+
+    const turnedWords = wordAnalysis.filter(w => w.turnedCorrectToIncorrect);
+
+    // Simple SVG Bar Chart Generator
+    const renderBarChart = (dataMap, title, color, unit = "") => {
+        // Handle both Object {date: val} and Array [[date, val]] formats
+        const entries = (Array.isArray(dataMap) ? dataMap : Object.entries(dataMap || {}).sort()).slice(-30);
+        const maxVal = Math.max(...entries.map(e => e[1]), 1);
+        
+        if (entries.length === 0 || maxVal === 0) return (
+            <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 h-full flex flex-col">
+                <h4 className="text-slate-400 text-sm font-bold mb-4 uppercase tracking-wider">{title} (最近30日)</h4>
+                <div className="flex-1 flex items-center justify-center text-slate-600 italic text-sm">暫無數據</div>
+            </div>
+        );
+        
+        return (
+            <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
+                <h4 className="text-slate-400 text-sm font-bold mb-4 uppercase tracking-wider">{title} (最近30日)</h4>
+                <div className="h-40 flex items-end gap-[1px] md:gap-1 px-2 border-b border-slate-700/50">
+                    {entries.map(([date, val]) => (
+                        <div key={date} className="group relative flex-1 h-full flex items-end">
+                            <div 
+                                className={`w-full rounded-t-[2px] transition-all duration-700 ${color}`}
+                                style={{ height: `${Math.max((val / maxVal) * 100, 2)}%` }}
+                            ></div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-30 shadow-2xl border border-slate-600 pointer-events-none">
+                                <div className="text-slate-400 text-[8px] mb-1">{date}</div>
+                                <div className="text-yellow-500">{Math.round(val)}{unit}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex justify-between mt-2 text-[10px] text-slate-500 font-mono">
+                    <span>{entries[0][0]}</span>
+                    <span>{entries[entries.length-1][0]}</span>
+                </div>
+            </div>
+        );
+    };
+
+    const renderLineChart = (data, title, label) => {
+        if (!data || data.length < 2) return (
+            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 h-full flex flex-col items-center justify-center text-slate-500 italic text-center">
+                <TrendingUp className="w-8 h-8 opacity-20 mb-2" />
+                {title}：數據積累中...
+            </div>
+        );
+        
+        const entries = data.slice(-14);
+        const vals = entries.map(e => e[1]);
+        const maxVal = Math.max(...vals, 1);
+        const minVal = Math.min(...vals);
+        
+        const width = 400;
+        const height = 120;
+        const padding = 20;
+        
+        const getX = (i) => (i / (entries.length - 1)) * (width - 2 * padding) + padding;
+        const getY = (v) => height - (((v - (minVal * 0.8)) / (maxVal - (minVal * 0.8) || 1)) * (height - 2 * padding) + padding);
+
+        const points = entries.map((e, i) => ({ x: getX(i), y: getY(e[1]), val: e[1], label: e[0] }));
+        const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+        return (
+            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 flex flex-col h-full group">
+                <h4 className="text-slate-400 text-sm font-bold mb-6 uppercase tracking-wider flex items-center gap-2">
+                   <TrendingUp className="w-4 h-4 text-yellow-500" /> {title}
+                </h4>
+                <div className="relative flex-1 min-h-[140px]">
+                    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+                        <defs>
+                            <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.3" />
+                                <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
+                        {[0, 0.5, 1].map(v => (
+                            <line key={v} x1="0" y1={padding + v*(height-2*padding)} x2={width} y2={padding + v*(height-2*padding)} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
+                        ))}
+                        <path d={`${pathD} L ${getX(entries.length-1)} ${height} L ${getX(0)} ${height} Z`} fill="url(#lineGradient)" />
+                        <path d={pathD} fill="none" stroke="#fbbf24" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                        {points.map((p, i) => (
+                            <g key={i} className="group/pt">
+                                <circle cx={p.x} cy={p.y} r="3" fill="#fbbf24" className="group-hover/pt:r-5 transition-all cursor-pointer" />
+                                <foreignObject x={p.x - 40} y={p.y - 40} width="80" height="40" className="opacity-0 group-hover/pt:opacity-100 transition-opacity pointer-events-none">
+                                    <div className="bg-slate-900 border border-slate-700 rounded-lg py-1 px-2 text-center shadow-2xl">
+                                        <div className="text-yellow-500 text-xs font-black">{Math.round(p.val)}</div>
+                                    </div>
+                                </foreignObject>
+                            </g>
+                        ))}
+                    </svg>
+                </div>
+                <div className="flex justify-between mt-4 text-[10px] text-slate-500 font-bold font-mono">
+                    <span className="bg-slate-900 px-2 py-0.5 rounded-md border border-slate-700">{entries[0][0]}</span>
+                    <span className="text-yellow-500/40 uppercase tracking-widest">{label}</span>
+                    <span className="bg-slate-900 px-2 py-0.5 rounded-md border border-slate-700">{entries[entries.length-1][0]}</span>
+                </div>
+            </div>
+        );
+    };
+
+    const WordListOverlay = ({ modal, onClose }) => {
+        if (!modal) return null;
+        return (
+            <div className="fixed inset-0 z-[300] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
+                <div className="bg-slate-900 w-full max-w-lg rounded-[32px] border-2 border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+                    <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
+                        <h3 className="text-xl font-black text-yellow-500 uppercase tracking-wider">{modal.title}</h3>
+                        <button onClick={onClose} className="p-2 hover:bg-red-600 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+                    </div>
+                    <div className="p-6 overflow-y-auto grid grid-cols-2 gap-3 custom-scrollbar">
+                        {modal.words.map((w, i) => (
+                            <div key={i} className="bg-slate-800 p-3 rounded-xl border border-slate-700 flex items-center gap-2 group hover:border-yellow-500 transition-all">
+                                <span className="w-6 h-6 flex items-center justify-center bg-slate-700 rounded-lg text-[10px] font-bold text-slate-400 group-hover:bg-yellow-500 group-hover:text-slate-900">{i+1}</span>
+                                <span className="font-bold text-lg">{w}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="p-4 bg-slate-800/30 text-center text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+                        TOTAL: {modal.words.length} WORDS
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="fixed inset-0 z-[250] bg-slate-950 flex flex-col md:overflow-hidden text-white animate-ninja-pop">
+            {/* Header */}
+            <div className="p-6 md:p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+                <div>
+                    <h2 className="text-2xl md:text-3xl font-black italic text-yellow-500 uppercase flex items-center gap-3">
+                        <Trophy className="w-8 h-8 md:w-10 md:h-10" /> 忍者成長記錄 <span className="text-white text-xs font-normal not-italic bg-blue-600 px-2 py-1 rounded ml-2">VERSION 1.0</span>
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-1">追蹤訓練成果與忍術進度</p>
+                </div>
+                <button 
+                    onClick={onClose}
+                    className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-full border-2 border-slate-600 hover:bg-red-600 transition-colors"
+                >
+                    <X className="w-6 h-6" />
+                </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-12 space-y-12 pb-24">
+                
+                {/* 1. Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div 
+                        onClick={() => setWordListModal({ title: "已掌握詞彙 (Mastered)", words: data.uniqueCorrectWords })}
+                        className="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-3xl border-4 border-green-400/30 shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-transform"
+                    >
+                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-125 transition-transform duration-700">
+                            <Check className="w-32 h-32" />
+                        </div>
+                        <div className="relative z-10">
+                            <p className="text-green-100 text-sm font-bold uppercase tracking-widest mb-2 opacity-80">已掌握詞彙</p>
+                            <h3 className="text-5xl font-black mb-1">{data.uniqueCorrectCount}</h3>
+                            <p className="text-green-200 text-xs font-medium">Unique Words Correct</p>
+                            <div className="mt-4 flex items-center gap-1 text-green-300 text-[10px] font-bold uppercase">
+                                <Play className="w-3 h-3" /> 點擊查看清單
+                            </div>
+                        </div>
+                    </div>
+                    <div 
+                        onClick={() => setWordListModal({ title: "待複習詞彙 (Mistakes)", words: data.uniqueIncorrectWords })}
+                        className="bg-gradient-to-br from-red-600 to-red-800 p-6 rounded-3xl border-4 border-red-400/30 shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-transform"
+                    >
+                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-125 transition-transform duration-700">
+                            <XCircle className="w-32 h-32" />
+                        </div>
+                        <div className="relative z-10">
+                            <p className="text-red-100 text-sm font-bold uppercase tracking-widest mb-2 opacity-80">待複習詞彙</p>
+                            <h3 className="text-5xl font-black mb-1">{data.uniqueIncorrectCount}</h3>
+                            <p className="text-red-200 text-xs font-medium">Unique Words Incorrect</p>
+                            <div className="mt-4 flex items-center gap-1 text-red-300 text-[10px] font-bold uppercase">
+                                <Play className="w-3 h-3" /> 點擊查看清單
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-3xl border-4 border-blue-400/30 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-125 transition-transform duration-700">
+                            <Play className="w-32 h-32" />
+                        </div>
+                        <div className="relative z-10">
+                            <p className="text-blue-100 text-sm font-bold uppercase tracking-widest mb-2 opacity-80">總答題次數</p>
+                            <h3 className="text-5xl font-black mb-1">{data.totalQuestions}</h3>
+                            <p className="text-blue-200 text-xs font-medium">Total Attempts</p>
+                        </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-6 rounded-3xl border-4 border-purple-400/30 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-125 transition-transform duration-700">
+                            <RotateCcw className="w-32 h-32" />
+                        </div>
+                        <div className="relative z-10">
+                            <p className="text-purple-100 text-sm font-bold uppercase tracking-widest mb-2 opacity-80">平均反應速度</p>
+                            <h3 className="text-5xl font-black mb-1">{data.avgTimePerQuestion}s</h3>
+                            <p className="text-purple-200 text-xs font-medium">Avg Time per Question</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. Charts Row 1: Daily Activity */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {renderBarChart(data.dailyQuestions, "答題次數統計", "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]")}
+                    {renderBarChart(data.dailyMinutes, "修煉時長統計", "bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.5)]", "m")}
+                </div>
+
+                {/* 3. Charts Row 2: Mastery Growth & Heatmap */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {renderLineChart(data.masteryGrowth, "修煉成果成長趨勢 (Mastery Growth)", "總掌握單字量")}
+                    
+                    {/* Learning Heatmap & Level Drill-down */}
+                    <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 flex flex-col">
+                        <h4 className="text-slate-400 text-sm font-bold mb-6 uppercase tracking-wider">關卡學習詳情 (Level Details)</h4>
+                        
+                        {/* Summary Heatmap Grid - Progress based */}
+                        <div className="grid grid-cols-5 md:grid-cols-10 gap-2 mb-8 pr-2 custom-scrollbar">
+                            {Object.entries(data.levelDetails || {})
+                                .filter(([lvl]) => /\d+/.test(lvl))
+                                .sort((a, b) => {
+                                    const n1 = parseInt(a[0].match(/\d+/)[0]);
+                                    const n2 = parseInt(b[0].match(/\d+/)[0]);
+                                    return n1 - n2;
+                                })
+                                .map(([level, details]) => {
+                                    const ratio = details.total > 0 ? details.mastered.length / details.total : 0;
+                                    // Interpolate Red -> Yellow -> Green
+                                    // 0% -> Red (220, 38, 38)
+                                    // 50% -> Yellow (234, 179, 8)
+                                    // 100% -> Green (22, 163, 74)
+                                    let r, g, b;
+                                    if (ratio < 0.5) {
+                                        const t = ratio / 0.5;
+                                        r = 220 + (234 - 220) * t;
+                                        g = 38 + (179 - 38) * t;
+                                        b = 38 + (8 - 38) * t;
+                                    } else {
+                                        const t = (ratio - 0.5) / 0.5;
+                                        r = 234 + (22 - 234) * t;
+                                        g = 179 + (163 - 179) * t;
+                                        b = 8 + (74 - 8) * t;
+                                    }
+
+                                    return (
+                                        <div 
+                                            key={level} 
+                                            onClick={() => {
+                                                setExpandedLevel(level);
+                                                document.getElementById(`level-detail-${level}`)?.scrollIntoView({ behavior: 'smooth' });
+                                            }}
+                                            className="aspect-square rounded-lg flex items-center justify-center text-[10px] font-bold group relative cursor-pointer hover:scale-110 transition-transform shadow-lg border border-white/10"
+                                            style={{ backgroundColor: `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})` }}
+                                        >
+                                            {level.match(/\d+/)?.[0]}
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 shadow-xl pointer-events-none border border-slate-600">
+                                                {level}: {Math.round(ratio*100)}% 掌握
+                                                <div className="text-[8px] text-slate-400 font-normal">{details.mastered.length} / {details.total} 單字</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 max-h-[500px]">
+                            {Object.entries(data.levelDetails || {}).length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-600 gap-4 py-12">
+                                    <Search className="w-12 h-12 opacity-20" />
+                                    <div className="text-center">
+                                        <p className="font-bold text-slate-500">未偵測到關卡數據</p>
+                                        <p className="text-[10px] max-w-[200px] mt-1">請確保您的 Google 試算表中包含名為「第1關」、「第2關」或「Level 1」的工作表。</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                Object.entries(data.levelDetails || {})
+                                    .filter(([lvl]) => /\d+/.test(lvl)) // Only show numbered levels
+                                    .sort((a,b) => {
+                                        const n1 = parseInt(a[0].match(/\d+/)[0]);
+                                        const n2 = parseInt(b[0].match(/\d+/)[0]);
+                                        return n1 - n2;
+                                    }).map(([level, details]) => (
+                                    <div key={level} id={`level-detail-${level}`} className="bg-slate-900/50 rounded-2xl border border-slate-800 overflow-hidden">
+                                        <div 
+                                            onClick={() => setExpandedLevel(expandedLevel === level ? null : level)}
+                                            className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-800 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-3 h-3 rounded-full ${details.unresolved.length > 0 ? 'bg-red-500' : (details.untested.length > 0 ? 'bg-yellow-500' : 'bg-green-500')}`}></div>
+                                                <span className="font-black text-lg">{level}</span>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-xs font-bold uppercase">
+                                                <span className="text-green-500">{details.mastered.length} 掌握</span>
+                                                <span className="text-red-400">{details.unresolved.length} 待補</span>
+                                                <span className="text-yellow-400">{details.untested.length} 未測</span>
+                                                <ChevronDown className={`w-4 h-4 transition-transform ${expandedLevel === level ? 'rotate-180' : ''}`} />
+                                            </div>
+                                        </div>
+                                        
+                                        {expandedLevel === level && (
+                                            <div className="p-4 bg-slate-950/50 border-t border-slate-800 space-y-4">
+                                                {details.unresolved.length > 0 && (
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2 flex items-center gap-1"><XCircle className="w-3 h-3" /> 需要加強 (Unresolved):</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {details.unresolved.map(w => <span key={w} className="px-2 py-1 bg-red-900/30 text-red-300 rounded-md text-sm border border-red-500/20">{w}</span>)}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {details.untested.length > 0 && (
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Info className="w-3 h-3" /> 尚未考過 (Untested):</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {details.untested.map(w => <span key={w} className="px-2 py-1 bg-yellow-900/30 text-yellow-300 rounded-md text-sm border border-yellow-500/20">{w}</span>)}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {details.unresolved.length === 0 && details.untested.length === 0 && (
+                                                    <p className="text-center py-4 text-green-500 font-bold text-sm italic">此關卡已完美通關！所有單字皆已掌握。</p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. Incorrect Words Tables */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    {/* Top Incorrect Words */}
+                    <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden">
+                        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
+                            <h4 className="text-yellow-500 font-bold flex items-center gap-2">
+                                <XCircle className="w-5 h-5" /> 高頻錯誤詞彙 (TOP {filter})
+                            </h4>
+                            <select 
+                                value={filter} 
+                                onChange={(e) => setFilter(Number(e.target.value))}
+                                className="bg-slate-800 text-xs font-bold px-3 py-1 rounded-full border border-slate-700 outline-none focus:border-yellow-500"
+                            >
+                                <option value="10">TOP 10</option>
+                                <option value="20">TOP 20</option>
+                                <option value="50">TOP 50</option>
+                                <option value="100">TOP 100</option>
+                            </select>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-800/50 text-slate-500 text-xs uppercase sticky top-0">
+                                    <tr>
+                                        <th className="px-6 py-3 font-bold">詞彙</th>
+                                        <th className="px-6 py-3 font-bold text-center">錯誤次數</th>
+                                        <th className="px-6 py-3 font-bold text-center">成功前嘗試</th>
+                                        <th className="px-6 py-3 font-bold text-right">狀態</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {topIncorrect.map((w, i) => (
+                                        <tr key={i} className="hover:bg-slate-800/30 transition-colors">
+                                            <td className="px-6 py-4 font-black text-lg">{w.word}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="bg-red-900/40 text-red-400 px-2 py-1 rounded-full font-bold">{w.incorrect}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center text-slate-400 italic">
+                                                {w.triesBeforeCorrect === -1 ? '尚未成功' : `${w.triesBeforeCorrect} 次`}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                {w.finalCorrect ? <span className="text-green-500 font-bold flex justify-end items-center gap-1"><Check className="w-4 h-4" /> 已修正</span> : <span className="text-slate-500">精進中</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {topIncorrect.length === 0 && (
+                                        <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-600">目前尚無錯誤紀錄，做得很好！</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Regressed Words (Correct to Incorrect) */}
+                    <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden">
+                        <div className="p-6 border-b border-slate-800 bg-slate-800/30">
+                            <h4 className="text-orange-500 font-bold flex items-center gap-2">
+                                <RotateCcw className="w-5 h-5" /> 警示：曾答對但近期錯誤
+                            </h4>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-800/50 text-slate-500 text-xs uppercase sticky top-0">
+                                    <tr>
+                                        <th className="px-6 py-3 font-bold">詞彙</th>
+                                        <th className="px-6 py-3 font-bold text-center">歷史正確次數</th>
+                                        <th className="px-6 py-3 font-bold text-right">提醒</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {turnedWords.map((w, i) => (
+                                        <tr key={i} className="hover:bg-slate-800/30 transition-colors">
+                                            <td className="px-6 py-4 font-black text-lg text-orange-400">{w.word}</td>
+                                            <td className="px-6 py-4 text-center font-bold">{w.correct}</td>
+                                            <td className="px-6 py-4 text-right text-xs text-slate-500">此詞彙近期出現退步，建議重新溫習。</td>
+                                        </tr>
+                                    ))}
+                                    {turnedWords.length === 0 && (
+                                        <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-600">沒有退步的詞彙，穩定發揮中！</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            {/* Overlays */}
+            <WordListOverlay modal={wordListModal} onClose={() => setWordListModal(null)} />
+
+            {/* Footer / Ninja Tip */}
+            <div className="p-4 bg-yellow-500 text-slate-950 text-center font-bold text-xs uppercase tracking-[0.2em] fixed bottom-0 w-full z-50">
+                忍者的力量源自於不斷的磨練 • KEEP TRAINING, LITTLE NINJA!
+            </div>
+        </div>
+    );
+};
+
 export default function App() {
     const [gameState, setGameState] = useState('start'); // start, playing, end, settings, map, training, fail, level_complete
     const [level, setLevel] = useState(1);
@@ -534,6 +1005,7 @@ export default function App() {
 
     const speak = useCallback((text, onEnd) => {
         if ('speechSynthesis' in window) {
+
             // iOS optimization: Avoid .cancel() if possible, but keep it for queue clearing
             window.speechSynthesis.cancel();
             
@@ -1556,21 +2028,37 @@ export default function App() {
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-center gap-6">
+                        <div className="flex flex-col items-center gap-8">
                             <button
                                 onClick={() => {
                                     setGameState('map');
                                     speak('準備好開始冒險未？出發！');
                                 }}
-                                className="group relative px-16 py-8 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-[32px] shadow-[0_15px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all duration-100"
+                                className="group relative px-20 py-10 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-[40px] shadow-[0_20px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all duration-100"
                             >
-                                <div className="flex items-center gap-4">
-                                    <Play className="w-12 h-12 text-slate-900 fill-slate-900" />
-                                    <span className="text-5xl font-black text-slate-900 uppercase">START</span>
+                                <div className="flex items-center gap-6">
+                                    <Play className="w-16 h-16 text-slate-900 fill-slate-900" />
+                                    <span className="text-6xl font-black text-slate-900 uppercase tracking-tighter">START</span>
                                 </div>
-                                <div className="absolute -inset-1 bg-yellow-400 blur opacity-20 group-hover:opacity-40 transition-opacity rounded-[32px]"></div>
+                                <div className="absolute -inset-2 bg-yellow-400 blur opacity-10 group-hover:opacity-30 transition-opacity rounded-[40px]"></div>
                             </button>
-                            
+
+                            <div className="flex flex-wrap justify-center gap-6">
+                                <button
+                                    onClick={() => setGameState('dashboard')}
+                                    className="px-10 py-5 bg-slate-800/80 rounded-3xl border-2 border-slate-600 text-white font-bold text-xl hover:bg-slate-700 hover:border-yellow-500 transition-all flex items-center gap-3 group shadow-2xl"
+                                >
+                                    <Trophy className="w-8 h-8 text-yellow-500 group-hover:animate-bounce" /> 成長記錄 (RECORDS)
+                                </button>
+                                
+                                <button
+                                    onClick={() => setGameState('settings')}
+                                    className="px-10 py-5 bg-slate-800/80 rounded-3xl border-2 border-slate-600 text-white font-bold text-xl hover:bg-slate-700 hover:border-yellow-500 transition-all flex items-center gap-3 group shadow-2xl"
+                                >
+                                    <Settings className="w-8 h-8 text-slate-400 group-hover:rotate-90 transition-transform duration-500" /> 系統設定 (SETTINGS)
+                                </button>
+                            </div>
+
                             {/* Diagnostic Tool: Manual Test Voice Button */}
                             <div className="flex items-center gap-3">
                                 <button
@@ -1592,6 +2080,7 @@ export default function App() {
                                 </button>
                             </div>
                             
+
                             {ttsDiagnosticStatus === 'missing-voice' && (
                                 <div className="bg-red-500/20 border border-red-500/50 p-3 rounded-xl flex items-center gap-3 animate-bounce">
                                     <XCircle className="w-5 h-5 text-red-400" />
@@ -2578,6 +3067,14 @@ export default function App() {
                         </div>
                     </div>
                 </div>
+            )}
+            {/* Dashboard Modal */}
+            {gameState === 'dashboard' && (
+                <NinjagoDashboard 
+                    user={user} 
+                    googleSheetsUrl={googleSheetsUrl} 
+                    onClose={() => setGameState('start')} 
+                />
             )}
         </div>
     );
