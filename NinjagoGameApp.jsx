@@ -1,7 +1,7 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const VERSION = "0.1.34";
-const UPDATE_TIME = "2026-03-18 22:52 HKT";
+const VERSION = "0.1.36";
+const UPDATE_TIME = "2026-03-24 17:45 HKT";
 
 import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock, TrendingUp, Search, ChevronDown, HelpCircle, User, Calendar, Clock, Award } from 'lucide-react';
 
