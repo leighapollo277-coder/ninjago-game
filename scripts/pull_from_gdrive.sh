@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-SCRATCH_ROOT="/Users/kenyim/.gemini/antigravity/scratch"
+SCRATCH_ROOT="/Users/kenneth/.gemini/antigravity/scratch"
 REMOTE="gdrive"
 DEST_ROOT="Antigravity"
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
@@ -28,7 +28,7 @@ for WORKSPACE_PATH in "$SCRATCH_ROOT"/*; do
         echo "Checking updates for workspace: $WORKSPACE_NAME"
         
         echo "Dry-running pull for $WORKSPACE_NAME to identify changes..."
-        /Users/kenyim/.gemini/antigravity/scratch/NinjagoGameApp/rclone copy --update "$REMOTE:$DEST_ROOT/${WORKSPACE_NAME}_Backup" "$WORKSPACE_PATH" \
+        rclone copy --update "$REMOTE:$DEST_ROOT/${WORKSPACE_NAME}_Backup" "$WORKSPACE_PATH" \
             --backup-dir "$WORKSPACE_PATH/../${WORKSPACE_NAME}_Archive/$TIMESTAMP" \
             "${EXCLUDES[@]}" \
             --verbose --dry-run
@@ -37,7 +37,7 @@ for WORKSPACE_PATH in "$SCRATCH_ROOT"/*; do
         read -p "Do you want to proceed with pulling these files from Google Drive? (y/n): " confirm
         if [[ "$confirm" == [yY] || "$confirm" == [yY][eE][sS] ]]; then
             echo "Proceeding with pull..."
-            /Users/kenyim/.gemini/antigravity/scratch/NinjagoGameApp/rclone copy --update "$REMOTE:$DEST_ROOT/${WORKSPACE_NAME}_Backup" "$WORKSPACE_PATH" \
+            rclone copy --update "$REMOTE:$DEST_ROOT/${WORKSPACE_NAME}_Backup" "$WORKSPACE_PATH" \
                 --backup-dir "$WORKSPACE_PATH/../${WORKSPACE_NAME}_Archive/$TIMESTAMP" \
                 "${EXCLUDES[@]}" \
                 --verbose
