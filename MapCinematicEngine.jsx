@@ -4,18 +4,41 @@ import { ChevronLeft, ChevronRight, Play, Lock, Award, Scroll, Trophy, Zap, Map 
 import { STORY_BEATS } from './data/Stories';
 
 // === Odyssey 2.0 Asset Constants ===
-const HERO_ASSETS = {
-    1: '/assets/hero_1_cole.png',
-    2: '/assets/hero_2_jay.png',
-    3: '/assets/hero_3_kai.png',
-    4: '/assets/hero_4_zane.png',
-    5: '/assets/hero_5_lloyd.png'
+// === Odyssey 6.0 Battle Asset Constants ===
+const BATTLE_HERO_ASSETS = {
+    1: '/assets/hero_master_cole.png', 
+    2: '/assets/hero_master_jay_v2.png',
+    3: '/assets/hero_master_kai_v3.png',
+    4: '/assets/hero_master_zane_v2.png',
+    5: '/assets/hero_master_lloyd_v2.png'
+};
+
+const VILLAIN_ASSETS = {
+    1: '/assets/villain_skulkin.png'
 };
 
 const MAP_ASSETS = {
     SCYTHE: '/assets/reward_scythe.png',
     NUNCHUCKS: '/assets/reward_nunchucks.png',
-    BOSS_PALACE: '/assets/boss_palace.png'
+    BOSS_PALACE: '/assets/boss_palace.png',
+    FLASH: 'https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&q=80&w=100' 
+};
+
+// --- ODYSSEY 10.2: ULTIMATE COMBAT LOGIC ---
+const HERO_COMBAT_FORMATIONS = {
+    1: { name: 'Ground Strike', hitX: '45%', hitY: '55%', yHero: 10, scaleHero: 1.4, element: '#22c55e' }, // Cole
+    2: { name: 'Power Slide', hitX: '40%', hitY: '75%', yHero: 100, scaleHero: 1.6, element: '#3b82f6' }, // Jay
+    3: { name: 'Overhead Jump', hitX: '42%', hitY: '45%', yHero: -60, scaleHero: 1.5, element: '#ef4444' }, // Kai
+    4: { name: 'Cold Lunge', hitX: '45%', hitY: '50%', yHero: -20, scaleHero: 1.4, element: '#22d3ee' }, // Zane
+    5: { name: 'Dragon Landing', hitX: '45%', hitY: '70%', yHero: 40, scaleHero: 1.6, element: '#fbbf24' } // Lloyd
+};
+
+const ELEMENTAL_FILTERS = {
+    1: 'none', // Earth (Standard)
+    2: 'hue-rotate(180deg) brightness(1.5) drop-shadow(0 0 15px #3b82f6)', // Lightning (Shocked)
+    3: 'brightness(0.3) saturate(0) drop-shadow(0 0 10px #ef4444)', // Fire (Charred)
+    4: 'hue-rotate(160deg) saturate(0.5) brightness(1.8) drop-shadow(0 0 20px #22d3ee)', // Ice (Frozen)
+    5: 'hue-rotate(90deg) brightness(1.2) drop-shadow(0 0 20px #a855f7)' // Energy (Enchanted)
 };
 
 const LEVEL_PRESETS = Array.from({ length: 55 }, (_, i) => {
@@ -28,17 +51,135 @@ const LEVEL_PRESETS = Array.from({ length: 55 }, (_, i) => {
         isBoss,
         chapter,
         story: STORY_BEATS[i] || "修行中...",
-        briefing: isBoss ? "BOSS MISSION" : "RECOVER WEAPON",
         reward: chapter === 1 ? MAP_ASSETS.SCYTHE : MAP_ASSETS.NUNCHUCKS
     };
 });
 
+// --- MODULAR TRANSPARENCY UTILITY (V2: LUMINANCE MASKING) ---
+const TransparentSprite = ({ src, className, style, isVillain }) => {
+    const canvasRef = useRef(null);
+    const [processedSrc, setProcessedSrc] = useState(src);
+
+    useEffect(() => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = src;
+        img.onload = () => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Professional Luminance-to-Alpha Logic
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i+1];
+                const b = data[i+2];
+                
+                // Calculate luminosity (perceived brightness)
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+                
+                // Odyssey 9.0: Aggressive thresholding for non-perfect black backgrounds
+                if (luminance < 60) {
+                    data[i+3] = Math.max(0, ((luminance - 10) / 50) * 255);
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+            setProcessedSrc(canvas.toDataURL());
+        };
+    }, [src]);
+
+    return (
+        <div className="relative group">
+            <canvas ref={canvasRef} className="hidden" />
+            <img 
+                src={processedSrc} 
+                className={className} 
+                style={{
+                    ...style,
+                    // Odyssey 9.0: Tight Silhouette Mask to kill the square frame edges
+                    maskImage: isVillain 
+                        ? 'radial-gradient(ellipse at center, black 40%, transparent 85%), linear-gradient(to bottom, black 80%, transparent 95%)' 
+                        : 'radial-gradient(ellipse at center, black 40%, transparent 85%)',
+                    WebkitMaskImage: isVillain 
+                        ? 'radial-gradient(ellipse at center, black 40%, transparent 85%), linear-gradient(to bottom, black 80%, transparent 95%)' 
+                        : 'radial-gradient(ellipse at center, black 40%, transparent 85%)'
+                }} 
+            />
+        </div>
+    );
+};
+
+// --- BATTLE DIORAMA (DYNAMICALY ALIGNED CLASH) ---
+const BattleDiorama = ({ heroId, villainId, isBoss, chapter }) => {
+    const config = HERO_COMBAT_FORMATIONS[chapter] || HERO_COMBAT_FORMATIONS[1];
+    const elf = ELEMENTAL_FILTERS[chapter] || 'none';
+
+    return (
+        <motion.div 
+            animate={{ x: [0, -4, 4, -4, 0] }} // Stronger impact shake
+            transition={{ delay: 0.4, duration: 0.2 }}
+            className="relative w-full h-full flex items-center justify-center pt-24"
+        >
+            {/* Villain (Layer 1: LEFT) */}
+            <motion.div 
+                initial={{ x: -100, opacity: 0, scale: 0.9 }}
+                animate={{ x: -10, opacity: 0.9, scale: isBoss ? 1.6 : 1.2 }}
+                className="absolute left-0 w-[200px] md:w-[300px] h-full pointer-events-none"
+            >
+                <TransparentSprite 
+                    src={VILLAIN_ASSETS[villainId] || VILLAIN_ASSETS[1]} 
+                    className="w-full h-full object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]"
+                    style={{ filter: elf }} // MODULAR ELEMENTAL STATUS
+                    isVillain={true}
+                />
+            </motion.div>
+
+            {/* Hero (Layer 2: RIGHT - ATTACKING LEFT) */}
+            <motion.div 
+                initial={{ x: 100, opacity: 0, scale: 1.1 }}
+                animate={{ 
+                    x: 10, 
+                    y: config.yHero, // DYNAMIC POSE OFFSET
+                    opacity: 1, 
+                    scale: config.scaleHero 
+                }}
+                transition={{ type: 'spring', damping: 15, stiffness: 100, delay: 0.2 }}
+                className="absolute right-0 w-[260px] md:w-[350px] h-full pointer-events-none z-10"
+            >
+                <TransparentSprite 
+                    src={BATTLE_HERO_ASSETS[chapter]} 
+                    className="w-full h-full object-contain filter drop-shadow-[0_40px_60px_rgba(0,0,0,1)] brightness-110 contrast-105"
+                />
+            </motion.div>
+
+            {/* Impact Flash (LAYERED & ALIGNED TO WEAPON) */}
+            <motion.div 
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: [0, 2.5, 0], opacity: [0, 0.8, 0] }}
+                transition={{ delay: 0.4, duration: 0.3 }}
+                style={{ 
+                    left: config.hitX, 
+                    top: config.hitY,
+                    backgroundColor: config.element 
+                }}
+                className="absolute z-20 w-48 h-48 rounded-full blur-[60px]"
+            />
+        </motion.div>
+    );
+};
+
 const BIOME_STYLING = [
-    { bg: 'radial-gradient(circle at center, #064e3b 0%, #020617 100%)', color: '#22c55e', name: 'EARTH REALM' },
-    { bg: 'radial-gradient(circle at center, #1e3a8a 0%, #020617 100%)', color: '#3b82f6', name: 'STORM DESERT' },
-    { bg: 'radial-gradient(circle at center, #7f1d1d 0%, #020617 100%)', color: '#ef4444', name: 'FIRE PEAK' },
-    { bg: 'radial-gradient(circle at center, #4c1d95 0%, #020617 100%)', color: '#a855f7', name: 'GHOST MARSH' },
-    { bg: 'radial-gradient(circle at center, #713f12 0%, #020617 100%)', color: '#fbbf24', name: 'GOLDEN TEMPLE' }
+    { bg: 'radial-gradient(circle at center, #064e3b 0%, #020617 100%)', color: '#22c55e', name: '大地秘境' },
+    { bg: 'radial-gradient(circle at center, #1e3a8a 0%, #020617 100%)', color: '#3b82f6', name: '風暴沙漠' },
+    { bg: 'radial-gradient(circle at center, #7f1d1d 0%, #020617 100%)', color: '#ef4444', name: '烈焰火山' },
+    { bg: 'radial-gradient(circle at center, #4c1d95 0%, #020617 100%)', color: '#a855f7', name: '幽靈沼澤' },
+    { bg: 'radial-gradient(circle at center, #713f12 0%, #020617 100%)', color: '#fbbf24', name: '黃金神廟' }
 ];
 
 const MapCinematicEngine = () => {
@@ -50,7 +191,7 @@ const MapCinematicEngine = () => {
 
     const activeLevel = LEVEL_PRESETS[activeIdx];
     const currentBiome = BIOME_STYLING[activeLevel.chapter - 1];
-    const currentHero = HERO_ASSETS[activeLevel.chapter];
+    const currentHero = BATTLE_HERO_ASSETS[activeLevel.chapter];
     const bossCloseness = (activeIdx % 11) / 10; // 0 to 1 as we approach boss level
 
     // Flight Trigger
@@ -75,35 +216,37 @@ const MapCinematicEngine = () => {
                 className="absolute inset-0 z-[5] bg-gradient-to-b from-black/80 via-transparent to-black pointer-events-none"
             />
             
-            {/* HUD: TOP STATUS BAR (RESPONSIVE) */}
-            <div className="absolute top-4 md:top-10 left-1/2 -translate-x-1/2 z-[100] w-[90vw] md:w-auto pointer-events-none">
+            {/* HUD: TOP STATUS BAR (MOBILE OPTIMIZED & LOCALIZED) */}
+            <div className="absolute top-6 md:top-12 left-1/2 -translate-x-1/2 z-[100] w-[95vw] md:w-auto pointer-events-none">
                 <motion.div 
                     initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                    className="flex items-center justify-between md:justify-start gap-4 md:gap-12 px-6 md:px-12 py-3 md:py-4 bg-slate-900/60 backdrop-blur-xl rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] pointer-events-auto"
+                    className="flex items-center justify-between md:justify-center gap-4 md:gap-32 px-6 md:px-28 py-4 md:py-10 bg-slate-900/40 backdrop-blur-3xl rounded-full border border-white/10 shadow-[0_40px_80px_rgba(0,0,0,0.7)] pointer-events-auto"
                 >
-                    <div className="flex flex-col items-center border-r border-white/10 pr-4 md:pr-12">
-                        <span className="text-[8px] md:text-[10px] font-black text-white/40 tracking-[0.4em] uppercase">Chap</span>
-                        <span className="text-xl md:text-3xl font-['Bangers'] text-white italic">{activeLevel.chapter}</span>
+                    <div className="flex items-center justify-center">
+                        <span className="text-2xl md:text-5xl font-['Noto_Sans_TC'] font-black text-white tracking-[0.2em] whitespace-nowrap">
+                            章節{['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][activeLevel.chapter] || activeLevel.chapter}
+                        </span>
                     </div>
                     
-                    <div className="flex flex-col items-center px-2 md:px-12 truncate">
-                        <span className="text-[8px] md:text-[10px] font-black text-yellow-500/60 tracking-[0.4em] uppercase">Realm</span>
-                        <span className="text-sm md:text-2xl font-['Bangers'] text-yellow-500 italic truncate max-w-[100px] md:max-w-none">{currentBiome.name}</span>
+                    <div className="flex flex-col items-center truncate">
+                        <span className="text-[12px] md:text-[16px] font-black text-yellow-500/60 tracking-[0.2em] mb-1 md:mb-2 whitespace-nowrap">當前境界</span>
+                        <span className="text-xl md:text-5xl font-['Noto_Sans_TC'] font-black text-yellow-500 italic tracking-widest truncate max-w-[120px] md:max-w-none leading-none">{currentBiome.name}</span>
                     </div>
 
-                    <div className="flex flex-col items-center border-l border-white/10 pl-4 md:pl-12">
-                        <span className="text-[8px] md:text-[10px] font-black text-white/40 tracking-[0.4em] uppercase">Progress</span>
-                        <div className="flex items-center gap-2 md:gap-3">
-                            <span className="text-xl md:text-3xl font-['Bangers'] text-white italic">{completedLevels.length}</span>
-                            <span className="hidden md:inline text-sm font-bold text-white/20">/ 55</span>
+                    <div className="flex flex-col items-center pl-2 md:pl-0">
+                        <span className="text-[12px] md:text-[16px] font-black text-white/40 tracking-[0.2em] mb-1 md:mb-2 whitespace-nowrap">冒險進度</span>
+                        <div className="flex items-center gap-1 md:gap-4">
+                            <span className="text-3xl md:text-7xl font-['Bangers'] text-white italic tracking-widest leading-none">{activeIdx + 1}</span>
+                            <span className="text-xl md:text-5xl font-['Bangers'] text-white/10 italic tracking-widest leading-none">/</span>
+                            <span className="text-xl md:text-5xl font-['Bangers'] text-white/10 italic tracking-widest leading-none">55</span>
                         </div>
                     </div>
 
                     <button 
                         onClick={() => setShowDojo(true)}
-                        className="p-3 bg-white/5 rounded-full border border-white/10 hover:bg-yellow-500 hover:text-black transition-all"
+                        className="p-3 md:p-9 bg-white/5 rounded-full border border-white/10 hover:bg-yellow-500 hover:text-black transition-all shadow-xl md:shadow-2xl group ml-2 md:ml-4"
                     >
-                        <Trophy size={18} />
+                        <Trophy size={20} className="md:w-9 md:h-9 group-hover:scale-110 transition-transform" />
                     </button>
                 </motion.div>
             </div>
@@ -138,33 +281,41 @@ const MapCinematicEngine = () => {
                             >
                                 <div className={`relative cursor-pointer group p-2 transition-all duration-500 ${isActive ? '' : 'hover:scale-125'}`}>
                                     
-                                    {/* CLEAN NODE PLATFORM */}
-                                    <div className={`relative w-48 h-48 rounded-full border-[2px] flex items-center justify-center transition-all duration-700 ${isActive ? 'border-yellow-500/50 bg-white/5 shadow-[0_0_80px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/40'}`}>
+                                    {/* MINIMAL NODE INDICATOR (REPLACES CIRCLES) */}
+                                    <div className={`relative flex items-center justify-center transition-all duration-700 ${isActive ? 'scale-110' : 'scale-100 opacity-40'}`}>
                                         
-                                        {/* INTEGRATED LANDMARK/ITEM */}
-                                        <div className="w-full h-full p-6 overflow-hidden rounded-full relative">
-                                            {level.isBoss ? (
-                                                <img src={MAP_ASSETS.BOSS_PALACE} className="w-full h-full object-cover rounded-full mix-blend-lighten opacity-80" />
-                                            ) : completedLevels.includes(idx) ? (
-                                                <img src={level.reward} className="w-full h-full object-contain filter drop-shadow-[0_10px_20px_rgba(234,179,8,0.4)]" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <Lock className="text-slate-800" size={32} />
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* GROUND SHADOW (ANCHORS THE CHARACTERS) */}
+                                        {isActive && (
+                                            <div className="absolute -bottom-4 w-64 h-12 bg-black/60 blur-2xl rounded-[100%] z-0" />
+                                        )}
 
-                                        {/* CHAPTER HERO (MOUNTED WITHOUT LABELS) */}
+                                        {/* INACTIVE ESSENCE POINT */}
+                                        {!isActive && (
+                                            <div className={`w-3 h-3 rounded-full blur-[1px] shadow-[0_0_15px_currentColor]`} style={{ backgroundColor: currentBiome.color }} />
+                                        )}
+                                        
+                                        {/* ODYSSEY 10.2: SPINJITZU KINETIC BATTLE DIORAMA */}
                                         {isActive && (
                                             <motion.div 
-                                                initial={{ scale: 0, y: 100 }} 
-                                                animate={{ scale: 1, y: 0 }}
-                                                className="absolute -top-[180px] md:-top-[200px] w-[260px] md:w-[350px] h-[260px] md:h-[350px] pointer-events-none"
+                                                initial={{ scale: 0, y: 100, rotate: 180 }} 
+                                                animate={{ 
+                                                    scale: 1.2, 
+                                                    y: -40, 
+                                                    rotate: isFlying ? 1080 : 0 // SPINJITZU TRANSITION
+                                                }}
+                                                transition={{ 
+                                                    duration: 0.8,
+                                                    type: 'spring',
+                                                    damping: 18,
+                                                    stiffness: 70
+                                                }}
+                                                className="absolute w-[400px] md:w-[600px] h-[350px] md:h-[450px] pointer-events-none"
                                             >
-                                                <img 
-                                                    src={currentHero} 
-                                                    className="w-full h-full object-contain mix-blend-screen filter drop-shadow-[0_40px_60px_rgba(0,0,0,1)]" 
-                                                    style={{ maskImage: 'radial-gradient(circle, black 55%, transparent 95%)', WebkitMaskImage: 'radial-gradient(circle, black 55%, transparent 95%)' }}
+                                                <BattleDiorama 
+                                                    heroId={activeLevel.chapter} 
+                                                    villainId={1} 
+                                                    isBoss={level.isBoss}
+                                                    chapter={activeLevel.chapter}
                                                 />
                                             </motion.div>
                                         )}
@@ -197,7 +348,6 @@ const MapCinematicEngine = () => {
                                 
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black text-yellow-500 tracking-[0.4em] uppercase mb-1">{activeLevel.briefing}</span>
                                         <h2 className="text-3xl md:text-5xl font-['Bangers'] italic text-white tracking-widest leading-none">{activeLevel.name}</h2>
                                     </div>
                                     <div className="p-4 bg-white/5 rounded-2xl hidden md:block">
