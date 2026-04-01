@@ -1,9 +1,9 @@
 import React from 'react';
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const VERSION = "0.1.36";
-const UPDATE_TIME = "2026-03-24 17:45 HKT";
+import pkg from './package.json';
+const VERSION = "0.1.24";
 
-import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock, TrendingUp, Search, ChevronDown, HelpCircle, User, Calendar, Clock, Award } from 'lucide-react';
+import { Maximize, Minimize, Volume2, Play, RotateCcw, Settings, Home, Plus, Trash2, Save, Info, Check, X, ChevronLeft, XCircle, Trophy, Lock, Unlock } from 'lucide-react';
 
 // === 資料與常數準備 ===
 const CHARACTERS = [
@@ -437,477 +437,6 @@ const Particles = () => {
     );
 };
 
-// === 元件：儀表板 (Dashboard) ===
-const NinjagoDashboard = ({ user, googleSheetsUrl, onClose }) => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [filter, setFilter] = useState(10); // Top X incorrect words
-    const [wordListModal, setWordListModal] = useState(null); // { title: string, words: string[] }
-    const [expandedLevel, setExpandedLevel] = useState(null); // level name
-
-    useEffect(() => {
-        if (!user || !googleSheetsUrl) return;
-        setLoading(true);
-        fetch(`${googleSheetsUrl}?userEmail=${user.email}&event=GET_DASHBOARD`)
-            .then(res => res.json())
-            .then(json => {
-                if (json.result === "error") throw new Error(json.message);
-                setData(json);
-            })
-            .catch(err => setError(err.message))
-            .finally(() => setLoading(false));
-    }, [user, googleSheetsUrl]);
-
-    if (loading) return (
-        <div className="fixed inset-0 z-[250] bg-slate-900/90 backdrop-blur-xl flex flex-col items-center justify-center text-white">
-            <div className="w-20 h-20 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-xl font-bold animate-pulse">正在召喚數據忍者...</p>
-        </div>
-    );
-
-    if (error) return (
-        <div className="fixed inset-0 z-[250] bg-slate-900/90 backdrop-blur-xl flex flex-col items-center justify-center text-white p-6">
-            <XCircle className="w-20 h-20 text-red-500 mb-4" />
-            <p className="text-xl font-bold mb-4">讀取失敗: {error}</p>
-            <button onClick={onClose} className="px-8 py-3 bg-slate-700 rounded-full font-bold">返回</button>
-        </div>
-    );
-
-    const wordAnalysis = data?.wordAnalysis || [];
-    const topIncorrect = [...wordAnalysis]
-        .filter(w => w.incorrect > 0)
-        .sort((a, b) => b.incorrect - a.incorrect)
-        .slice(0, filter);
-
-    const turnedWords = wordAnalysis.filter(w => w.turnedCorrectToIncorrect);
-
-    // Simple SVG Bar Chart Generator
-    const renderBarChart = (dataMap, title, color, unit = "") => {
-        // Handle both Object {date: val} and Array [[date, val]] formats
-        const entries = (Array.isArray(dataMap) ? dataMap : Object.entries(dataMap || {}).sort()).slice(-30);
-        const maxVal = Math.max(...entries.map(e => e[1]), 1);
-        
-        if (entries.length === 0 || maxVal === 0) return (
-            <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 h-full flex flex-col">
-                <h4 className="text-slate-400 text-sm font-bold mb-4 uppercase tracking-wider">{title} (最近30日)</h4>
-                <div className="flex-1 flex items-center justify-center text-slate-600 italic text-sm">暫無數據</div>
-            </div>
-        );
-        
-        return (
-            <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                <h4 className="text-slate-400 text-sm font-bold mb-4 uppercase tracking-wider">{title} (最近30日)</h4>
-                <div className="h-40 flex items-end gap-[1px] md:gap-1 px-2 border-b border-slate-700/50">
-                    {entries.map(([date, val]) => (
-                        <div key={date} className="group relative flex-1 h-full flex items-end">
-                            <div 
-                                className={`w-full rounded-t-[2px] transition-all duration-700 ${color}`}
-                                style={{ height: `${Math.max((val / maxVal) * 100, 2)}%` }}
-                            ></div>
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-30 shadow-2xl border border-slate-600 pointer-events-none">
-                                <div className="text-slate-400 text-[8px] mb-1">{date}</div>
-                                <div className="text-yellow-500">{Math.round(val)}{unit}</div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="flex justify-between mt-2 text-[10px] text-slate-500 font-mono">
-                    <span>{entries[0][0]}</span>
-                    <span>{entries[entries.length-1][0]}</span>
-                </div>
-            </div>
-        );
-    };
-
-    const renderLineChart = (data, title, label) => {
-        if (!data || data.length < 2) return (
-            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 h-full flex flex-col items-center justify-center text-slate-500 italic text-center">
-                <TrendingUp className="w-8 h-8 opacity-20 mb-2" />
-                {title}：數據積累中...
-            </div>
-        );
-        
-        const entries = data.slice(-14);
-        const vals = entries.map(e => e[1]);
-        const maxVal = Math.max(...vals, 1);
-        const minVal = Math.min(...vals);
-        
-        const width = 400;
-        const height = 120;
-        const padding = 20;
-        
-        const getX = (i) => (i / (entries.length - 1)) * (width - 2 * padding) + padding;
-        const getY = (v) => height - (((v - (minVal * 0.8)) / (maxVal - (minVal * 0.8) || 1)) * (height - 2 * padding) + padding);
-
-        const points = entries.map((e, i) => ({ x: getX(i), y: getY(e[1]), val: e[1], label: e[0] }));
-        const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-
-        return (
-            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 flex flex-col h-full group">
-                <h4 className="text-slate-400 text-sm font-bold mb-6 uppercase tracking-wider flex items-center gap-2">
-                   <TrendingUp className="w-4 h-4 text-yellow-500" /> {title}
-                </h4>
-                <div className="relative flex-1 min-h-[140px]">
-                    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
-                        <defs>
-                            <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.3" />
-                                <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
-                            </linearGradient>
-                        </defs>
-                        {[0, 0.5, 1].map(v => (
-                            <line key={v} x1="0" y1={padding + v*(height-2*padding)} x2={width} y2={padding + v*(height-2*padding)} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
-                        ))}
-                        <path d={`${pathD} L ${getX(entries.length-1)} ${height} L ${getX(0)} ${height} Z`} fill="url(#lineGradient)" />
-                        <path d={pathD} fill="none" stroke="#fbbf24" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-                        {points.map((p, i) => (
-                            <g key={i} className="group/pt">
-                                <circle cx={p.x} cy={p.y} r="3" fill="#fbbf24" className="group-hover/pt:r-5 transition-all cursor-pointer" />
-                                <foreignObject x={p.x - 40} y={p.y - 40} width="80" height="40" className="opacity-0 group-hover/pt:opacity-100 transition-opacity pointer-events-none">
-                                    <div className="bg-slate-900 border border-slate-700 rounded-lg py-1 px-2 text-center shadow-2xl">
-                                        <div className="text-yellow-500 text-xs font-black">{Math.round(p.val)}</div>
-                                    </div>
-                                </foreignObject>
-                            </g>
-                        ))}
-                    </svg>
-                </div>
-                <div className="flex justify-between mt-4 text-[10px] text-slate-500 font-bold font-mono">
-                    <span className="bg-slate-900 px-2 py-0.5 rounded-md border border-slate-700">{entries[0][0]}</span>
-                    <span className="text-yellow-500/40 uppercase tracking-widest">{label}</span>
-                    <span className="bg-slate-900 px-2 py-0.5 rounded-md border border-slate-700">{entries[entries.length-1][0]}</span>
-                </div>
-            </div>
-        );
-    };
-
-    const WordListOverlay = ({ modal, onClose }) => {
-        if (!modal) return null;
-        return (
-            <div className="fixed inset-0 z-[300] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
-                <div className="bg-slate-900 w-full max-w-lg rounded-[32px] border-2 border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-                    <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
-                        <h3 className="text-xl font-black text-yellow-500 uppercase tracking-wider">{modal.title}</h3>
-                        <button onClick={onClose} className="p-2 hover:bg-red-600 rounded-full transition-colors"><X className="w-6 h-6" /></button>
-                    </div>
-                    <div className="p-6 overflow-y-auto grid grid-cols-2 gap-3 custom-scrollbar">
-                        {modal.words.map((w, i) => (
-                            <div key={i} className="bg-slate-800 p-3 rounded-xl border border-slate-700 flex items-center gap-2 group hover:border-yellow-500 transition-all">
-                                <span className="w-6 h-6 flex items-center justify-center bg-slate-700 rounded-lg text-[10px] font-bold text-slate-400 group-hover:bg-yellow-500 group-hover:text-slate-900">{i+1}</span>
-                                <span className="font-bold text-lg">{w}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="p-4 bg-slate-800/30 text-center text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-                        TOTAL: {modal.words.length} WORDS
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    return (
-        <div className="fixed inset-0 z-[250] bg-slate-950 flex flex-col md:overflow-hidden text-white animate-ninja-pop">
-            {/* Header */}
-            <div className="p-6 md:p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-                <div>
-                    <h2 className="text-2xl md:text-3xl font-black italic text-yellow-500 uppercase flex items-center gap-3">
-                        <Trophy className="w-8 h-8 md:w-10 md:h-10" /> 忍者成長記錄 <span className="text-white text-xs font-normal not-italic bg-blue-600 px-2 py-1 rounded ml-2">VERSION 1.0</span>
-                    </h2>
-                    <p className="text-slate-400 text-sm mt-1">追蹤訓練成果與忍術進度</p>
-                </div>
-                <button 
-                    onClick={onClose}
-                    className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-full border-2 border-slate-600 hover:bg-red-600 transition-colors"
-                >
-                    <X className="w-6 h-6" />
-                </button>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-12 space-y-12 pb-24">
-                
-                {/* 1. Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div 
-                        onClick={() => setWordListModal({ title: "已掌握詞彙 (Mastered)", words: data.uniqueCorrectWords })}
-                        className="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-3xl border-4 border-green-400/30 shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-transform"
-                    >
-                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-125 transition-transform duration-700">
-                            <Check className="w-32 h-32" />
-                        </div>
-                        <div className="relative z-10">
-                            <p className="text-green-100 text-sm font-bold uppercase tracking-widest mb-2 opacity-80">已掌握詞彙</p>
-                            <h3 className="text-5xl font-black mb-1">{data.uniqueCorrectCount}</h3>
-                            <p className="text-green-200 text-xs font-medium">Unique Words Correct</p>
-                            <div className="mt-4 flex items-center gap-1 text-green-300 text-[10px] font-bold uppercase">
-                                <Play className="w-3 h-3" /> 點擊查看清單
-                            </div>
-                        </div>
-                    </div>
-                    <div 
-                        onClick={() => setWordListModal({ title: "待複習詞彙 (Mistakes)", words: data.uniqueIncorrectWords })}
-                        className="bg-gradient-to-br from-red-600 to-red-800 p-6 rounded-3xl border-4 border-red-400/30 shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-transform"
-                    >
-                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-125 transition-transform duration-700">
-                            <XCircle className="w-32 h-32" />
-                        </div>
-                        <div className="relative z-10">
-                            <p className="text-red-100 text-sm font-bold uppercase tracking-widest mb-2 opacity-80">待複習詞彙</p>
-                            <h3 className="text-5xl font-black mb-1">{data.uniqueIncorrectCount}</h3>
-                            <p className="text-red-200 text-xs font-medium">Unique Words Incorrect</p>
-                            <div className="mt-4 flex items-center gap-1 text-red-300 text-[10px] font-bold uppercase">
-                                <Play className="w-3 h-3" /> 點擊查看清單
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-3xl border-4 border-blue-400/30 shadow-2xl relative overflow-hidden group">
-                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-125 transition-transform duration-700">
-                            <Play className="w-32 h-32" />
-                        </div>
-                        <div className="relative z-10">
-                            <p className="text-blue-100 text-sm font-bold uppercase tracking-widest mb-2 opacity-80">總答題次數</p>
-                            <h3 className="text-5xl font-black mb-1">{data.totalQuestions}</h3>
-                            <p className="text-blue-200 text-xs font-medium">Total Attempts</p>
-                        </div>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-6 rounded-3xl border-4 border-purple-400/30 shadow-2xl relative overflow-hidden group">
-                        <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-125 transition-transform duration-700">
-                            <RotateCcw className="w-32 h-32" />
-                        </div>
-                        <div className="relative z-10">
-                            <p className="text-purple-100 text-sm font-bold uppercase tracking-widest mb-2 opacity-80">平均反應速度</p>
-                            <h3 className="text-5xl font-black mb-1">{data.avgTimePerQuestion}s</h3>
-                            <p className="text-purple-200 text-xs font-medium">Avg Time per Question</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 2. Charts Row 1: Daily Activity */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {renderBarChart(data.dailyQuestions, "答題次數統計", "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]")}
-                    {renderBarChart(data.dailyMinutes, "修煉時長統計", "bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.5)]", "m")}
-                </div>
-
-                {/* 3. Charts Row 2: Mastery Growth & Heatmap */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {renderLineChart(data.masteryGrowth, "修煉成果成長趨勢 (Mastery Growth)", "總掌握單字量")}
-                    
-                    {/* Learning Heatmap & Level Drill-down */}
-                    <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 flex flex-col">
-                        <h4 className="text-slate-400 text-sm font-bold mb-6 uppercase tracking-wider">關卡學習詳情 (Level Details)</h4>
-                        
-                        {/* Summary Heatmap Grid - Progress based */}
-                        <div className="grid grid-cols-5 md:grid-cols-10 gap-2 mb-8 pr-2 custom-scrollbar">
-                            {Object.entries(data.levelDetails || {})
-                                .filter(([lvl]) => /\d+/.test(lvl))
-                                .sort((a, b) => {
-                                    const n1 = parseInt(a[0].match(/\d+/)[0]);
-                                    const n2 = parseInt(b[0].match(/\d+/)[0]);
-                                    return n1 - n2;
-                                })
-                                .map(([level, details]) => {
-                                    const ratio = details.total > 0 ? details.mastered.length / details.total : 0;
-                                    // Interpolate Red -> Yellow -> Green
-                                    // 0% -> Red (220, 38, 38)
-                                    // 50% -> Yellow (234, 179, 8)
-                                    // 100% -> Green (22, 163, 74)
-                                    let r, g, b;
-                                    if (ratio < 0.5) {
-                                        const t = ratio / 0.5;
-                                        r = 220 + (234 - 220) * t;
-                                        g = 38 + (179 - 38) * t;
-                                        b = 38 + (8 - 38) * t;
-                                    } else {
-                                        const t = (ratio - 0.5) / 0.5;
-                                        r = 234 + (22 - 234) * t;
-                                        g = 179 + (163 - 179) * t;
-                                        b = 8 + (74 - 8) * t;
-                                    }
-
-                                    return (
-                                        <div 
-                                            key={level} 
-                                            onClick={() => {
-                                                setExpandedLevel(level);
-                                                document.getElementById(`level-detail-${level}`)?.scrollIntoView({ behavior: 'smooth' });
-                                            }}
-                                            className="aspect-square rounded-lg flex items-center justify-center text-[10px] font-bold group relative cursor-pointer hover:scale-110 transition-transform shadow-lg border border-white/10"
-                                            style={{ backgroundColor: `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})` }}
-                                        >
-                                            {level.match(/\d+/)?.[0]}
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 shadow-xl pointer-events-none border border-slate-600">
-                                                {level}: {Math.round(ratio*100)}% 掌握
-                                                <div className="text-[8px] text-slate-400 font-normal">{details.mastered.length} / {details.total} 單字</div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 max-h-[500px]">
-                            {Object.entries(data.levelDetails || {}).length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-600 gap-4 py-12">
-                                    <Search className="w-12 h-12 opacity-20" />
-                                    <div className="text-center">
-                                        <p className="font-bold text-slate-500">未偵測到關卡數據</p>
-                                        <p className="text-[10px] max-w-[200px] mt-1">請確保您的 Google 試算表中包含名為「第1關」、「第2關」或「Level 1」的工作表。</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                Object.entries(data.levelDetails || {})
-                                    .filter(([lvl]) => /\d+/.test(lvl)) // Only show numbered levels
-                                    .sort((a,b) => {
-                                        const n1 = parseInt(a[0].match(/\d+/)[0]);
-                                        const n2 = parseInt(b[0].match(/\d+/)[0]);
-                                        return n1 - n2;
-                                    }).map(([level, details]) => (
-                                    <div key={level} id={`level-detail-${level}`} className="bg-slate-900/50 rounded-2xl border border-slate-800 overflow-hidden">
-                                        <div 
-                                            onClick={() => setExpandedLevel(expandedLevel === level ? null : level)}
-                                            className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-800 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-3 h-3 rounded-full ${details.unresolved.length > 0 ? 'bg-red-500' : (details.untested.length > 0 ? 'bg-yellow-500' : 'bg-green-500')}`}></div>
-                                                <span className="font-black text-lg">{level}</span>
-                                            </div>
-                                            <div className="flex items-center gap-4 text-xs font-bold uppercase">
-                                                <span className="text-green-500">{details.mastered.length} 掌握</span>
-                                                <span className="text-red-400">{details.unresolved.length} 待補</span>
-                                                <span className="text-yellow-400">{details.untested.length} 未測</span>
-                                                <ChevronDown className={`w-4 h-4 transition-transform ${expandedLevel === level ? 'rotate-180' : ''}`} />
-                                            </div>
-                                        </div>
-                                        
-                                        {expandedLevel === level && (
-                                            <div className="p-4 bg-slate-950/50 border-t border-slate-800 space-y-4">
-                                                {details.unresolved.length > 0 && (
-                                                    <div>
-                                                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2 flex items-center gap-1"><XCircle className="w-3 h-3" /> 需要加強 (Unresolved):</p>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {details.unresolved.map(w => <span key={w} className="px-2 py-1 bg-red-900/30 text-red-300 rounded-md text-sm border border-red-500/20">{w}</span>)}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {details.untested.length > 0 && (
-                                                    <div>
-                                                        <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Info className="w-3 h-3" /> 尚未考過 (Untested):</p>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {details.untested.map(w => <span key={w} className="px-2 py-1 bg-yellow-900/30 text-yellow-300 rounded-md text-sm border border-yellow-500/20">{w}</span>)}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {details.unresolved.length === 0 && details.untested.length === 0 && (
-                                                    <p className="text-center py-4 text-green-500 font-bold text-sm italic">此關卡已完美通關！所有單字皆已掌握。</p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* 4. Incorrect Words Tables */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* Top Incorrect Words */}
-                    <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden">
-                        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
-                            <h4 className="text-yellow-500 font-bold flex items-center gap-2">
-                                <XCircle className="w-5 h-5" /> 高頻錯誤詞彙 (TOP {filter})
-                            </h4>
-                            <select 
-                                value={filter} 
-                                onChange={(e) => setFilter(Number(e.target.value))}
-                                className="bg-slate-800 text-xs font-bold px-3 py-1 rounded-full border border-slate-700 outline-none focus:border-yellow-500"
-                            >
-                                <option value="10">TOP 10</option>
-                                <option value="20">TOP 20</option>
-                                <option value="50">TOP 50</option>
-                                <option value="100">TOP 100</option>
-                            </select>
-                        </div>
-                        <div className="max-h-80 overflow-y-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-800/50 text-slate-500 text-xs uppercase sticky top-0">
-                                    <tr>
-                                        <th className="px-6 py-3 font-bold">詞彙</th>
-                                        <th className="px-6 py-3 font-bold text-center">錯誤次數</th>
-                                        <th className="px-6 py-3 font-bold text-center">成功前嘗試</th>
-                                        <th className="px-6 py-3 font-bold text-right">狀態</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-800">
-                                    {topIncorrect.map((w, i) => (
-                                        <tr key={i} className="hover:bg-slate-800/30 transition-colors">
-                                            <td className="px-6 py-4 font-black text-lg">{w.word}</td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="bg-red-900/40 text-red-400 px-2 py-1 rounded-full font-bold">{w.incorrect}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center text-slate-400 italic">
-                                                {w.triesBeforeCorrect === -1 ? '尚未成功' : `${w.triesBeforeCorrect} 次`}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                {w.finalCorrect ? <span className="text-green-500 font-bold flex justify-end items-center gap-1"><Check className="w-4 h-4" /> 已修正</span> : <span className="text-slate-500">精進中</span>}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {topIncorrect.length === 0 && (
-                                        <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-600">目前尚無錯誤紀錄，做得很好！</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Regressed Words (Correct to Incorrect) */}
-                    <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden">
-                        <div className="p-6 border-b border-slate-800 bg-slate-800/30">
-                            <h4 className="text-orange-500 font-bold flex items-center gap-2">
-                                <RotateCcw className="w-5 h-5" /> 警示：曾答對但近期錯誤
-                            </h4>
-                        </div>
-                        <div className="max-h-80 overflow-y-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-800/50 text-slate-500 text-xs uppercase sticky top-0">
-                                    <tr>
-                                        <th className="px-6 py-3 font-bold">詞彙</th>
-                                        <th className="px-6 py-3 font-bold text-center">歷史正確次數</th>
-                                        <th className="px-6 py-3 font-bold text-right">提醒</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-800">
-                                    {turnedWords.map((w, i) => (
-                                        <tr key={i} className="hover:bg-slate-800/30 transition-colors">
-                                            <td className="px-6 py-4 font-black text-lg text-orange-400">{w.word}</td>
-                                            <td className="px-6 py-4 text-center font-bold">{w.correct}</td>
-                                            <td className="px-6 py-4 text-right text-xs text-slate-500">此詞彙近期出現退步，建議重新溫習。</td>
-                                        </tr>
-                                    ))}
-                                    {turnedWords.length === 0 && (
-                                        <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-600">沒有退步的詞彙，穩定發揮中！</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            {/* Overlays */}
-            <WordListOverlay modal={wordListModal} onClose={() => setWordListModal(null)} />
-
-            {/* Footer / Ninja Tip */}
-            <div className="p-4 bg-yellow-500 text-slate-950 text-center font-bold text-xs uppercase tracking-[0.2em] fixed bottom-0 w-full z-50">
-                忍者的力量源自於不斷的磨練 • KEEP TRAINING, LITTLE NINJA!
-            </div>
-        </div>
-    );
-};
-
 export default function App() {
     const [gameState, setGameState] = useState('start'); // start, playing, end, settings, map, training, fail, level_complete
     const [level, setLevel] = useState(1);
@@ -946,10 +475,6 @@ export default function App() {
     });
     const [customWordSets, setCustomWordSets] = useState(() => JSON.parse(localStorage.getItem('customWordSets')) || []);
     const [wordStats, setWordStats] = useState(() => JSON.parse(localStorage.getItem('wordStats')) || {});
-    
-    // TTS Diagnostic State
-    const [showTtsDiagnostic, setShowTtsDiagnostic] = useState(false);
-    const [ttsDiagnosticStatus, setTtsDiagnosticStatus] = useState('unknown'); // 'unknown', 'missing-voice', 'muted', 'ok'
     const [selectedSubLevel, setSelectedSubLevel] = useState('all'); // lesson name or set id or 'all'
     const [currentWordPool, setCurrentWordPool] = useState(WORDS_LEVEL_1_2);
     const [sessionRemainingWords, setSessionRemainingWords] = useState([]);
@@ -980,55 +505,15 @@ export default function App() {
     const worldScrollRef = useRef(null);
 
     // --- 核心邏輯與語音 ---
-    const checkTtsAvailability = useCallback(() => {
-        if (!('speechSynthesis' in window)) {
-            setTtsDiagnosticStatus('unsupported');
-            return;
-        }
-
-        const voices = window.speechSynthesis.getVoices();
-        const hasHk = voices.some(v => v.lang.includes('HK') || v.lang.includes('zh-HK'));
-        
-        if (voices.length > 0 && !hasHk) {
-            setTtsDiagnosticStatus('missing-voice');
-        } else if (voices.length > 0) {
-            setTtsDiagnosticStatus('ok');
-        }
-    }, []);
-
-    useEffect(() => {
-        checkTtsAvailability();
+    const speak = useCallback((text) => {
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = checkTtsAvailability;
-        }
-    }, [checkTtsAvailability]);
-
-    const speak = useCallback((text, onEnd) => {
-        if ('speechSynthesis' in window) {
-
-            // iOS optimization: Avoid .cancel() if possible, but keep it for queue clearing
             window.speechSynthesis.cancel();
-            
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-HK';
             utterance.rate = speechRate;
-            
-            if (onEnd) utterance.onend = onEnd;
-
-            // Detection for Mute: If it doesn't start in 1000ms, it might be muted by system
-            const muteTimer = setTimeout(() => {
-                if (window.speechSynthesis.speaking && ttsDiagnosticStatus === 'ok') {
-                    // It "thinks" it's speaking but no sound? Likely system mute.
-                    // This is a heuristic only.
-                }
-            }, 1000);
-
-            utterance.onstart = () => clearTimeout(muteTimer);
-            
-            console.log(`[TTS] Speaking: ${text} | Lang: ${utterance.lang}`);
             window.speechSynthesis.speak(utterance);
         }
-    }, [speechRate, ttsDiagnosticStatus]);
+    }, [speechRate]);
 
     // --- 同步與紀錄系統 ---
     const syncToGoogleSheets = useCallback(() => {
@@ -1108,36 +593,31 @@ export default function App() {
 
                     // 2. Apply Reconstructed Progress (Scanned from logs)
                     if (data.reconstructedStatus && data.reconstructedStatus.subLevels) {
-                        console.log("[Sync] Overwriting with fresh reconstructed progress:", data.reconstructedStatus.subLevels);
-                        // Force calculation: Always discard PREVIOUS local state and use strictly RECONSTRUCTED data
-                        setCompletedLevels({ 
-                            subLevels: [...data.reconstructedStatus.subLevels] 
+                        console.log("Applying reconstructed levels:", data.reconstructedStatus.subLevels);
+                        setCompletedLevels(prev => {
+                            const merged = new Set([...prev.subLevels, ...data.reconstructedStatus.subLevels]);
+                            return { ...prev, subLevels: Array.from(merged) };
                         });
                     }
 
                     // 3. Handle Cloud Session (Partial Progress)
                     if (data.cloudSession) {
                         console.log("Cloud session found:", data.cloudSession);
-                        // GUARD: Only show popup if session email matches current user
-                        if (data.cloudSession.email && data.cloudSession.email !== email) {
-                            console.log("[Sync] REJECTED cloud session - belongs to", data.cloudSession.email, "not", email);
-                        } else {
-                            const localSession = JSON.parse(localStorage.getItem('ninjago_active_session'));
-                            if (!localSession || data.cloudSession.score > localSession.score) {
-                                console.log("Suggesting cloud session restore:", data.cloudSession);
-                                setResumeSessionData({
-                                    email: email,
-                                    words: data.cloudSession.words,
-                                    subName: data.cloudSession.subName,
-                                    sessionData: {
-                                        score: data.cloudSession.score,
-                                        target: 100,
-                                        energy: 100,
-                                        remaining: []
-                                    },
-                                    isFromCloud: true
-                                });
-                            }
+                        const localSession = JSON.parse(localStorage.getItem('ninjago_active_session'));
+                        // If cloud has a session and local doesn't or cloud has more score, suggest cloud
+                        if (!localSession || data.cloudSession.score > localSession.score) {
+                            console.log("Suggesting cloud session restore over local:", localSession);
+                            setResumeSessionData({
+                                words: data.cloudSession.words,
+                                subName: data.cloudSession.subName,
+                                sessionData: {
+                                    score: data.cloudSession.score,
+                                    target: 100, // Should ideally be dynamic from settings
+                                    energy: 100,
+                                    remaining: [] // Will regenerate on start
+                                },
+                                isFromCloud: true
+                            });
                         }
                     }
                     if (data.debugInfo) {
@@ -1148,26 +628,6 @@ export default function App() {
                 }
             }).catch(e => console.log("Fetch settings failed", e));
     };
-
-    const logout = useCallback(() => {
-        console.log("[Identity] Logging out and clearing all local data.");
-        localStorage.clear(); // Nuclear option for maximum safety
-        
-        // Reset all states to defaults
-        setUser(null);
-        setCompletedLevels({ subLevels: [] });
-        setWordStats({});
-        setCustomWordSets([]);
-        setMasterUnlock(false);
-        setHeroSkin('kai');
-        setScore(0);
-        setHeroEnergy(100);
-        setGameState('start');
-        setResumeSessionData(null);
-        
-        // Optional: Trigger a page reload to ensure a clean slate if needed
-        // window.location.reload();
-    }, []);
 
     const handleCredentialResponse = (response) => {
         const parseJwt = (token) => {
@@ -1180,22 +640,6 @@ export default function App() {
         };
 
         const userObj = parseJwt(response.credential);
-        const savedUser = JSON.parse(localStorage.getItem('ninjago_user'));
-        
-        // --- Identity Fix: NUCLEAR WIPE on every login ---
-        console.log("[Identity] Login detected. NUCLEAR localStorage.clear() to ensure fresh state.");
-        localStorage.clear();
-        
-        // Reset states to empty defaults so they MUST be re-populated by sync
-        setCompletedLevels({ subLevels: [] });
-        setWordStats({});
-        setCustomWordSets([]);
-        setMasterUnlock(false);
-        setHeroSkin('kai');
-        setScore(0);
-        setHeroEnergy(100);
-        setResumeSessionData(null);
-
         setUser(userObj);
         localStorage.setItem('ninjago_user', JSON.stringify(userObj));
         // Sync data from sheet after login
@@ -1508,14 +952,9 @@ export default function App() {
             const savedSession = localStorage.getItem('ninjago_active_session');
             if (savedSession) {
                 const sessionData = JSON.parse(savedSession);
-                // Guard: Only show resume if session belongs to current user
-                if (sessionData.subName === subName && sessionData.userEmail === user?.email) {
-                    setResumeSessionData({ words, subName, sessionData, email: user?.email });
+                if (sessionData.subName === subName) {
+                    setResumeSessionData({ words, subName, sessionData });
                     return; // 顯示 Resume 對話框
-                } else if (sessionData.userEmail !== user?.email) {
-                    // Wrong user's session - silently discard it
-                    console.log("[Session] Discarding stale session from", sessionData.userEmail, "(current user:", user?.email, ")");
-                    localStorage.removeItem('ninjago_active_session');
                 }
             }
         }
@@ -1664,7 +1103,6 @@ export default function App() {
 
             // --- 保存進度 ---
             const sessionData = {
-                userEmail: user?.email, // Tag session with user identity
                 subName: selectedSubLevel,
                 remaining: sessionRemainingWords,
                 score: score + 1,
@@ -1709,9 +1147,8 @@ export default function App() {
 
             // --- 保存進度 (即使答錯也要存，因為能量可能扣減) ---
             const sessionData = {
-                userEmail: user?.email, // Tag session with user identity
                 subName: selectedSubLevel,
-                remaining: [currentQuestion.target, ...sessionRemainingWords],
+                remaining: [currentQuestion.target, ...sessionRemainingWords], // 把剛剛答錯的字插回去 (或是維持原樣，看您希望答錯是否要重考)
                 score: score,
                 target: targetScore,
                 energy: Math.max(0, heroEnergy - 10)
@@ -1761,14 +1198,6 @@ export default function App() {
                         
                         <div className="flex flex-col items-center gap-6 py-8">
                             <div id="googleBtn" className="min-h-[50px] flex items-center justify-center"></div>
-                            {user && (
-                                <button 
-                                    onClick={logout}
-                                    className="text-slate-500 hover:text-red-400 text-xs font-bold uppercase tracking-tight transition-colors underline decoration-dotted"
-                                >
-                                    Log Out ({user.email})
-                                </button>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -1966,13 +1395,6 @@ export default function App() {
                             setAudioAllowed(true);
                             audioContext.bgm1.currentTime = 0;
                             audioContext.bgm1.play().catch(e => console.log(e));
-                            
-                            // iOS/iPadOS TTS priming: "speak" an empty string on first click
-                            if ('speechSynthesis' in window) {
-                                const u = new SpeechSynthesisUtterance('');
-                                window.speechSynthesis.speak(u);
-                                console.log("[TTS] Engine primed on first click.");
-                            }
                         }
                     }}
                 >
@@ -1983,21 +1405,16 @@ export default function App() {
                     {/* User Profile (If logged in) */}
                     <div className="z-20 flex flex-col items-center gap-4">
                         {user && (
-                            <div className="flex items-center gap-4 bg-white/10 p-3 pl-4 pr-6 rounded-full border border-white/20 backdrop-blur-md shadow-2xl">
+                            <div className="flex items-center gap-4 bg-white/10 p-3 rounded-full border border-white/20">
                                 <img src={user.picture} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400" />
                                 <div className="text-left">
                                     <p className="text-white font-bold leading-none">{user.name}</p>
-                                    <p className="text-yellow-400 text-[10px] opacity-70">{user.email}</p>
+                                    <p className="text-yellow-400 text-xs">{user.email}</p>
                                 </div>
-                                <div className="h-8 w-px bg-white/10 mx-2"></div>
-                                <button 
-                                    onClick={logout} 
-                                    className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors font-black text-xs uppercase tracking-tighter"
-                                    title="Sign Out & Clear All Data"
-                                >
-                                    <XCircle className="w-5 h-5" />
-                                    登出 (LOGOUT)
-                                </button>
+                                <button onClick={() => {
+                                    setUser(null);
+                                    localStorage.removeItem('ninjago_user');
+                                }} className="ml-2 text-white/50 hover:text-white"><X className="w-5 h-5"/></button>
                             </div>
                         )}
                     </div>
@@ -2024,156 +1441,28 @@ export default function App() {
                                 旋風忍者：冒險之旅
                             </div>
                             <div className="text-sm font-mono text-white/30 tracking-widest mt-2 uppercase">
-                                VER {VERSION} | UPDATED {UPDATE_TIME}
+                                VER {VERSION}
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-center gap-8">
+                        <div className="flex flex-col items-center gap-6">
                             <button
                                 onClick={() => {
                                     setGameState('map');
                                     speak('準備好開始冒險未？出發！');
                                 }}
-                                className="group relative px-20 py-10 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-[40px] shadow-[0_20px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all duration-100"
+                                className="group relative px-16 py-8 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-[32px] shadow-[0_15px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all duration-100"
                             >
-                                <div className="flex items-center gap-6">
-                                    <Play className="w-16 h-16 text-slate-900 fill-slate-900" />
-                                    <span className="text-6xl font-black text-slate-900 uppercase tracking-tighter">START</span>
+                                <div className="flex items-center gap-4">
+                                    <Play className="w-12 h-12 text-slate-900 fill-slate-900" />
+                                    <span className="text-5xl font-black text-slate-900 uppercase">START</span>
                                 </div>
-                                <div className="absolute -inset-2 bg-yellow-400 blur opacity-10 group-hover:opacity-30 transition-opacity rounded-[40px]"></div>
+                                <div className="absolute -inset-1 bg-yellow-400 blur opacity-20 group-hover:opacity-40 transition-opacity rounded-[32px]"></div>
                             </button>
-
-                            <div className="flex flex-wrap justify-center gap-6">
-                                <button
-                                    onClick={() => setGameState('dashboard')}
-                                    className="px-10 py-5 bg-slate-800/80 rounded-3xl border-2 border-slate-600 text-white font-bold text-xl hover:bg-slate-700 hover:border-yellow-500 transition-all flex items-center gap-3 group shadow-2xl"
-                                >
-                                    <Trophy className="w-8 h-8 text-yellow-500 group-hover:animate-bounce" /> 成長記錄 (RECORDS)
-                                </button>
-                                
-                                <button
-                                    onClick={() => setGameState('settings')}
-                                    className="px-10 py-5 bg-slate-800/80 rounded-3xl border-2 border-slate-600 text-white font-bold text-xl hover:bg-slate-700 hover:border-yellow-500 transition-all flex items-center gap-3 group shadow-2xl"
-                                >
-                                    <Settings className="w-8 h-8 text-slate-400 group-hover:rotate-90 transition-transform duration-500" /> 系統設定 (SETTINGS)
-                                </button>
-                            </div>
-
-                            {/* Diagnostic Tool: Manual Test Voice Button */}
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => {
-                                        if (!audioAllowed) setAudioAllowed(true);
-                                        speak('測試語音成功！聽唔聽到我講嘢呀？');
-                                    }}
-                                    className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 transition flex items-center gap-2 text-sm font-bold"
-                                >
-                                    <Volume2 className="w-5 h-5 text-yellow-500" />
-                                    🔊 測試語音 (TEST VOICE)
-                                </button>
-                                <button
-                                    onClick={() => setShowTtsDiagnostic(true)}
-                                    className="p-3 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-2xl border border-blue-500/30 transition shadow-lg"
-                                    title="Voice Help"
-                                >
-                                    <Info className="w-6 h-6" />
-                                </button>
-                            </div>
                             
-
-                            {ttsDiagnosticStatus === 'missing-voice' && (
-                                <div className="bg-red-500/20 border border-red-500/50 p-3 rounded-xl flex items-center gap-3 animate-bounce">
-                                    <XCircle className="w-5 h-5 text-red-400" />
-                                    <span className="text-red-100 text-xs font-bold">偵測到裝置尚未安裝廣東話語音！</span>
-                                    <button onClick={() => setShowTtsDiagnostic(true)} className="underline text-red-200 text-xs">查看教學</button>
-                                </div>
-                            )}
-
                             <p className="text-slate-400 font-bold tracking-widest animate-pulse mt-4">
                                 — 點擊開始你的忍者修煉之路 —
                             </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ===================== TTS Diagnostic Modal (Master Tutor) ===================== */}
-            {showTtsDiagnostic && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-                    <div className="bg-slate-900 w-full max-w-2xl rounded-[40px] border-4 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.3)] overflow-hidden flex flex-col max-h-[90vh]">
-                        {/* Header */}
-                        <div className="bg-yellow-500 p-6 flex justify-between items-center bg-gradient-to-r from-yellow-400 to-amber-600">
-                            <div className="flex items-center gap-4">
-                                <div className="bg-slate-900 p-2 rounded-2xl">
-                                    <Volume2 className="w-8 h-8 text-yellow-400" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-black text-slate-900 italic">NINJA VOICE TUTOR</h2>
-                                    <p className="text-xs font-bold text-slate-900/70 tracking-tighter uppercase">廣東話語音診斷助手</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setShowTtsDiagnostic(false)} className="bg-slate-900/20 hover:bg-slate-900/40 p-2 rounded-full transition">
-                                <X className="w-8 h-8 text-slate-900" />
-                            </button>
-                        </div>
-
-                        {/* Body */}
-                        <div className="p-8 overflow-y-auto space-y-8 flex-1 custom-scrollbar">
-                            {/* Step 1: Silent Mode */}
-                            <div className="flex gap-6">
-                                <div className="flex-shrink-0 w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center font-black text-2xl text-yellow-500 border border-white/10">1</div>
-                                <div className="space-y-3">
-                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                        檢查靜音開關 (Silent Mode)
-                                    </h3>
-                                    <p className="text-slate-400 text-sm leading-relaxed">
-                                        iPad 側面或控制中心嘅「鈴聲」圖示如果係<span className="text-red-400 font-bold">紅色</span>，網頁語音將會被禁音。請確保關閉靜音模式。
-                                    </p>
-                                    <div className="bg-slate-800/50 p-4 rounded-3xl border border-white/5 flex items-center gap-4">
-                                        <div className="bg-red-500 p-2 rounded-lg animate-pulse">
-                                            <Volume2 className="w-6 h-6 text-white" />
-                                        </div>
-                                        <span className="text-slate-300 text-xs">➔ 打開控制中心，點擊「鐘仔」圖示使其變為灰色。</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Step 2: Voice Download */}
-                            <div className="flex gap-6">
-                                <div className="flex-shrink-0 w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center font-black text-2xl text-yellow-500 border border-white/10">2</div>
-                                <div className="space-y-3">
-                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                        安裝廣東話語音 (Install Voice)
-                                    </h3>
-                                    <p className="text-slate-400 text-sm leading-relaxed">
-                                        如果裝置未下載「Sin-ji (廣東話)」語音，將無法發聲：
-                                    </p>
-                                    <div className="bg-slate-800/80 p-4 rounded-3xl border border-white/5 space-y-2">
-                                        <p className="text-xs text-yellow-400 font-mono">1. 設定 &gt; 輔助使用 &gt; 朗讀內容</p>
-                                        <p className="text-xs text-yellow-400 font-mono">2. 語音 &gt; 中文 &gt; 廣東話 (香港)</p>
-                                        <p className="text-xs text-yellow-400 font-mono">3. 點擊「雲端 ☁️」圖示進行下載</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Status Footer */}
-                            <div className="bg-slate-950/50 p-6 rounded-[32px] border border-white/5 text-center space-y-4">
-                                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">目前診斷狀態</p>
-                                <div className="flex justify-center gap-4">
-                                    <div className={`px-4 py-2 rounded-full text-xs font-black uppercase ${ttsDiagnosticStatus === 'ok' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                        VOICE: {ttsDiagnosticStatus === 'missing-voice' ? 'MISSING' : (ttsDiagnosticStatus === 'unsupported' ? 'INCOMPATIBLE' : 'OK')}
-                                    </div>
-                                    <div className="px-4 py-2 rounded-full bg-white/5 text-slate-400 text-xs font-black uppercase">
-                                        ENGINE: READY
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={() => speak('恭喜！你已經成功解鎖語音系統。')}
-                                    className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black rounded-2xl transition shadow-xl active:scale-95"
-                                >
-                                    即刻測試 (TEST NOW)
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -3031,9 +2320,6 @@ export default function App() {
                             <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">
                                 偵測到{resumeSessionData.isFromCloud ? '雲端' : '本地'}存檔！
                             </h2>
-                            <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5 inline-block mx-auto">
-                                <p className="text-yellow-400 text-xs font-mono">{resumeSessionData.email || '本地用戶'}</p>
-                            </div>
                             <p className="text-slate-400 font-bold leading-relaxed">
                                 您在 <span className="text-yellow-400">{resumeSessionData.subName}</span> 還有尚未完成的任務。<br/>
                                 目前進度：{resumeSessionData.sessionData.score} / {resumeSessionData.sessionData.target}
@@ -3057,24 +2343,9 @@ export default function App() {
                             >
                                 重新開始
                             </button>
-                            <button 
-                                onClick={() => setResumeSessionData(null)}
-                                className="w-full py-4 text-slate-500 hover:text-white transition-colors font-bold text-sm"
-                            >
-                                暫時跳過 (Skip for now)
-                            </button>
-
                         </div>
                     </div>
                 </div>
-            )}
-            {/* Dashboard Modal */}
-            {gameState === 'dashboard' && (
-                <NinjagoDashboard 
-                    user={user} 
-                    googleSheetsUrl={googleSheetsUrl} 
-                    onClose={() => setGameState('start')} 
-                />
             )}
         </div>
     );
